@@ -83,6 +83,9 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log(`Task status updated to: ${newStatus}`);
 
+    // Get user information for notifications
+    const { data: { user } } = await supabaseClient.auth.getUser();
+
     // If requesting adjustments, send notification to project manager
     if (action === "solicitar_ajustes") {
       // Get client and manager information
@@ -99,58 +102,185 @@ const handler = async (req: Request): Promise<Response> => {
       if (clientError || !client) {
         console.error("Error fetching client:", clientError);
       } else {
-        // Get manager profile
-        const { data: manager, error: managerError } = await supabaseClient
+        // Get manager and assignee information
+        const { data: manager } = await supabaseClient
           .from("profiles")
           .select("email, full_name")
           .eq("id", client.user_id)
           .single();
 
-        if (managerError || !manager) {
-          console.error("Error fetching manager:", managerError);
-        } else {
-          const managerEmail = manager.email;
-          const managerName = manager.full_name || "Gestor";
-          const clientName = client.name || "Cliente";
-          const projectName = (task.projects as any)?.name || "Projeto";
-          const productName = (task.products as any)?.name || "Tarefa";
+        // Get task assignee
+        const { data: taskDetails } = await supabaseClient
+          .from("tasks")
+          .select("assignee_id")
+          .eq("id", task_id)
+          .single();
 
-          if (managerEmail) {
-            console.log(`Sending notification to manager: ${managerEmail}`);
+        let assigneeEmail = null;
+        let assigneeName = null;
+        
+        if (taskDetails?.assignee_id) {
+          const { data: assignee } = await supabaseClient
+            .from("profiles")
+            .select("email, full_name")
+            .eq("id", taskDetails.assignee_id)
+            .single();
+          
+          assigneeEmail = assignee?.email;
+          assigneeName = assignee?.full_name;
+        }
 
-            const emailHtml = `
-              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                <h2 style="color: #333;">Solicitação de Ajustes</h2>
-                <p>Olá ${managerName},</p>
-                <p>O cliente <strong>${clientName}</strong> solicitou ajustes na seguinte tarefa:</p>
-                <div style="background-color: #f5f5f5; padding: 15px; border-radius: 5px; margin: 20px 0;">
-                  <p style="margin: 5px 0;"><strong>Projeto:</strong> ${projectName}</p>
-                  <p style="margin: 5px 0;"><strong>Produto:</strong> ${productName}</p>
-                  ${task.variant_description ? `<p style="margin: 5px 0;"><strong>Descrição:</strong> ${task.variant_description}</p>` : ''}
-                  ${comment ? `<p style="margin: 5px 0;"><strong>Comentário:</strong> ${comment}</p>` : ''}
-                </div>
-                <p>Por favor, revise a tarefa e faça os ajustes necessários.</p>
-                <p style="margin-top: 30px; color: #666; font-size: 12px;">
-                  Esta é uma notificação automática do sistema de gerenciamento de projetos.
-                </p>
-              </div>
-            `;
+        // Get client profile who made the request
+        const { data: clientProfile } = await supabaseClient
+          .from("profiles")
+          .select("full_name")
+          .eq("id", user?.id)
+          .single();
 
-            try {
-              const emailResponse = await resend.emails.send({
-                from: "Sistema de Projetos <onboarding@resend.dev>",
-                to: [managerEmail],
-                subject: `Ajustes Solicitados - ${productName}`,
-                html: emailHtml,
-              });
+        const managerEmail = manager?.email;
+        const managerName = manager?.full_name || "Gestor";
+        const clientName = client.name || "Cliente";
+        const clientUserName = clientProfile?.full_name || "Cliente";
+        const projectName = (task.projects as any)?.name || "Projeto";
+        const productName = (task.products as any)?.name || "Tarefa";
 
-              console.log("Email sent successfully:", emailResponse);
-            } catch (emailError) {
-              console.error("Error sending email:", emailError);
-              // Don't fail the entire operation if email fails
-            }
-          } else {
-            console.warn("Manager email not found, skipping notification");
+        // Send email to manager
+        if (managerEmail) {
+          try {
+            await resend.emails.send({
+              from: "Gestão de Projetos <onboarding@resend.dev>",
+              to: [managerEmail],
+              subject: `🔄 Ajustes solicitados em ${productName}`,
+              html: `
+                <!DOCTYPE html>
+                <html>
+                  <head><meta charset="UTF-8"></head>
+                  <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+                    <div style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+                      <h1 style="color: white; margin: 0; font-size: 24px;">🔄 Ajustes Solicitados</h1>
+                    </div>
+                    <div style="background-color: #ffffff; padding: 40px; border: 1px solid #e0e0e0; border-top: none; border-radius: 0 0 10px 10px;">
+                      <p style="font-size: 16px;">Olá <strong>${managerName}</strong>,</p>
+                      <p style="font-size: 16px;">O cliente <strong>${clientUserName}</strong> solicitou ajustes na tarefa:</p>
+                      <div style="background-color: #fef3c7; padding: 20px; border-left: 4px solid #f59e0b; border-radius: 4px; margin: 20px 0;">
+                        <p style="margin: 0 0 10px 0;"><strong>Tarefa:</strong> ${productName}</p>
+                        <p style="margin: 0 0 10px 0;"><strong>Projeto:</strong> ${projectName}</p>
+                        <p style="margin: 0;"><strong>Cliente:</strong> ${clientName}</p>
+                      </div>
+                      ${comment ? `<div style="background-color: #f8f9fa; padding: 20px; border-radius: 4px; margin: 20px 0;"><p style="margin: 0; font-weight: bold;">Comentário do cliente:</p><p style="margin: 10px 0 0 0; font-style: italic;">"${comment}"</p></div>` : ""}
+                      <p style="font-size: 16px; margin-top: 30px;">Por favor, revise a tarefa e faça os ajustes necessários.</p>
+                    </div>
+                  </body>
+                </html>
+              `,
+            });
+            console.log("Manager notification sent");
+          } catch (emailError) {
+            console.error("Error sending email to manager:", emailError);
+          }
+        }
+
+        // Send email to assignee if different from manager
+        if (assigneeEmail && assigneeEmail !== managerEmail) {
+          try {
+            await resend.emails.send({
+              from: "Gestão de Projetos <onboarding@resend.dev>",
+              to: [assigneeEmail],
+              subject: `🔄 Ajustes solicitados em ${productName}`,
+              html: `
+                <!DOCTYPE html>
+                <html>
+                  <head><meta charset="UTF-8"></head>
+                  <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+                    <div style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+                      <h1 style="color: white; margin: 0; font-size: 24px;">🔄 Ajustes Solicitados</h1>
+                    </div>
+                    <div style="background-color: #ffffff; padding: 40px; border: 1px solid #e0e0e0; border-top: none; border-radius: 0 0 10px 10px;">
+                      <p style="font-size: 16px;">Olá <strong>${assigneeName}</strong>,</p>
+                      <p style="font-size: 16px;">O cliente solicitou ajustes em uma tarefa atribuída a você:</p>
+                      <div style="background-color: #fef3c7; padding: 20px; border-left: 4px solid #f59e0b; border-radius: 4px; margin: 20px 0;">
+                        <p style="margin: 0 0 10px 0;"><strong>Tarefa:</strong> ${productName}</p>
+                        <p style="margin: 0;"><strong>Projeto:</strong> ${projectName}</p>
+                      </div>
+                      ${comment ? `<div style="background-color: #f8f9fa; padding: 20px; border-radius: 4px; margin: 20px 0;"><p style="margin: 0; font-weight: bold;">Comentário do cliente:</p><p style="margin: 10px 0 0 0; font-style: italic;">"${comment}"</p></div>` : ""}
+                    </div>
+                  </body>
+                </html>
+              `,
+            });
+            console.log("Assignee notification sent");
+          } catch (emailError) {
+            console.error("Error sending email to assignee:", emailError);
+          }
+        }
+      }
+    } else if (action === "aprovar") {
+      // Notify manager and assignee about approval
+      const { data: client } = await supabaseClient
+        .from("clients")
+        .select("id, name, user_id")
+        .eq("id", (task.projects as any).client_id)
+        .single();
+
+      if (client) {
+        const { data: manager } = await supabaseClient
+          .from("profiles")
+          .select("email, full_name")
+          .eq("id", client.user_id)
+          .single();
+
+        const { data: taskDetails } = await supabaseClient
+          .from("tasks")
+          .select("assignee_id")
+          .eq("id", task_id)
+          .single();
+
+        const recipients = [];
+        if (manager?.email) recipients.push(manager.email);
+
+        if (taskDetails?.assignee_id) {
+          const { data: assignee } = await supabaseClient
+            .from("profiles")
+            .select("email")
+            .eq("id", taskDetails.assignee_id)
+            .single();
+
+          if (assignee?.email && assignee.email !== manager?.email) {
+            recipients.push(assignee.email);
+          }
+        }
+
+        if (recipients.length > 0) {
+          try {
+            await resend.emails.send({
+              from: "Gestão de Projetos <onboarding@resend.dev>",
+              to: recipients,
+              subject: `✅ Tarefa aprovada: ${(task.products as any)?.name}`,
+              html: `
+                <!DOCTYPE html>
+                <html>
+                  <head><meta charset="UTF-8"></head>
+                  <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+                    <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+                      <h1 style="color: white; margin: 0; font-size: 24px;">✅ Tarefa Aprovada!</h1>
+                    </div>
+                    <div style="background-color: #ffffff; padding: 40px; border: 1px solid #e0e0e0; border-top: none; border-radius: 0 0 10px 10px;">
+                      <p style="font-size: 16px;">Ótima notícia! 🎉</p>
+                      <p style="font-size: 16px;">A seguinte tarefa foi aprovada pelo cliente:</p>
+                      <div style="background-color: #d1fae5; padding: 20px; border-left: 4px solid #10b981; border-radius: 4px; margin: 20px 0;">
+                        <p style="margin: 0 0 10px 0;"><strong>Tarefa:</strong> ${(task.products as any)?.name}</p>
+                        <p style="margin: 0 0 10px 0;"><strong>Projeto:</strong> ${(task.projects as any)?.name}</p>
+                        <p style="margin: 0;"><strong>Cliente:</strong> ${client.name}</p>
+                      </div>
+                      <p style="font-size: 16px; margin-top: 30px;">Parabéns pelo excelente trabalho! 👏</p>
+                    </div>
+                  </body>
+                </html>
+              `,
+            });
+            console.log("Approval notification sent");
+          } catch (emailError) {
+            console.error("Error sending approval email:", emailError);
           }
         }
       }

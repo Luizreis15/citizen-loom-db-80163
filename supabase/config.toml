@@ -1,1 +1,28 @@
 project_id = "ygfanvazmxpdwvrcjtgu"
+
+[functions.create-task]
+verify_jwt = true
+
+[functions.dashboard-stats]
+verify_jwt = true
+
+[functions.export-financial-csv]
+verify_jwt = true
+
+[functions.task-client-action]
+verify_jwt = true
+
+[functions.send-welcome-client]
+verify_jwt = false
+
+[functions.send-welcome-collaborator]
+verify_jwt = true
+
+[functions.send-comment-notification]
+verify_jwt = false
+
+[functions.send-overdue-tasks-alert]
+verify_jwt = false
+
+[functions.send-overdue-tasks-alert.schedule]
+cron = "0 9 * * *"

@@ -85,6 +85,7 @@ export function ClientFormDialog({ open, onOpenChange, onSuccess }: ClientFormDi
   
   // Tab 3: Client Services
   const [clientServices, setClientServices] = useState<ClientService[]>([]);
+  const [sendWelcomeEmail, setSendWelcomeEmail] = useState(true);
   
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -217,6 +218,23 @@ export function ClientFormDialog({ open, onOpenChange, onSuccess }: ClientFormDi
         if (servicesError) throw servicesError;
       }
 
+      // Send welcome email if checkbox is marked and email is provided
+      if (sendWelcomeEmail && validated.email) {
+        try {
+          await supabase.functions.invoke("send-welcome-client", {
+            body: {
+              client_id: newClient.id,
+              client_name: validated.name,
+              client_email: validated.email,
+            },
+          });
+          console.log("Welcome email sent to client");
+        } catch (emailError) {
+          console.error("Error sending welcome email:", emailError);
+          // Don't fail the whole operation if email fails
+        }
+      }
+
       toast.success("Cliente criado com sucesso!");
       resetForm();
       onSuccess();
@@ -248,6 +266,7 @@ export function ClientFormDialog({ open, onOpenChange, onSuccess }: ClientFormDi
       rules_and_observations: "",
     });
     setClientServices([]);
+    setSendWelcomeEmail(true);
     setErrors({});
   };
 
@@ -514,10 +533,23 @@ export function ClientFormDialog({ open, onOpenChange, onSuccess }: ClientFormDi
                   }
                   placeholder="Diretrizes, regras de uso da marca, observações importantes..."
                   rows={4}
-                />
+                  />
+                </div>
+
+                <div className="flex items-center space-x-2 p-4 border rounded-lg bg-muted/50">
+                  <input
+                    type="checkbox"
+                    id="send-welcome-email"
+                    checked={sendWelcomeEmail}
+                    onChange={(e) => setSendWelcomeEmail(e.target.checked)}
+                    className="h-4 w-4 rounded border-gray-300"
+                  />
+                  <label htmlFor="send-welcome-email" className="text-sm font-medium cursor-pointer">
+                    Enviar email de boas-vindas com link de acesso ao portal
+                  </label>
+                </div>
               </div>
-            </div>
-          </TabsContent>
+            </TabsContent>
 
           {/* Tab 3: Client Services */}
           <TabsContent value="services" className="space-y-4">
