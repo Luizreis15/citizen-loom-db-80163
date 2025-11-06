@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react";
 import { useState } from "react";
-import logo from "@/assets/logo-digital-hera.jpg";
+import logo from "@/assets/logo-digital-hera.png";
 export function PublicHeader() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
