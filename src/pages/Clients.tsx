@@ -12,7 +12,25 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Users } from "lucide-react";
+import { Plus, Users, MoreVertical, Edit, Archive, Trash2, Mail } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale/pt-BR";
 import { Badge } from "@/components/ui/badge";
@@ -37,6 +55,9 @@ const Clients = () => {
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [clientToDelete, setClientToDelete] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -76,6 +97,84 @@ const Clients = () => {
 
   const getStatusVariant = (status: string) => {
     return status === "Ativo" ? "default" : "secondary";
+  };
+
+  const handleEditClient = (client: Client, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedClient(client);
+    setDialogOpen(true);
+  };
+
+  const handleArchiveClient = async (clientId: string, currentStatus: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      const newStatus = currentStatus === "Ativo" ? "Inativo" : "Ativo";
+      const { error } = await supabase
+        .from("clients")
+        .update({ status: newStatus })
+        .eq("id", clientId);
+
+      if (error) throw error;
+
+      toast.success(`Cliente ${newStatus === "Ativo" ? "ativado" : "arquivado"} com sucesso!`);
+      fetchClients();
+    } catch (error: any) {
+      toast.error("Erro ao atualizar status do cliente");
+      console.error("Error updating client status:", error);
+    }
+  };
+
+  const handleDeleteClient = async () => {
+    if (!clientToDelete) return;
+
+    try {
+      const { error } = await supabase
+        .from("clients")
+        .delete()
+        .eq("id", clientToDelete);
+
+      if (error) throw error;
+
+      toast.success("Cliente excluído com sucesso!");
+      fetchClients();
+      setDeleteDialogOpen(false);
+      setClientToDelete(null);
+    } catch (error: any) {
+      toast.error("Erro ao excluir cliente");
+      console.error("Error deleting client:", error);
+    }
+  };
+
+  const handleResendWelcomeEmail = async (client: Client, e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    if (!client.email) {
+      toast.error("Cliente não possui e-mail cadastrado");
+      return;
+    }
+
+    try {
+      const { error } = await supabase.functions.invoke("send-welcome-client", {
+        body: {
+          client_id: client.id,
+          client_name: client.name,
+          client_email: client.email,
+        },
+      });
+
+      if (error) throw error;
+
+      toast.success("E-mail de boas-vindas reenviado com sucesso!");
+    } catch (error: any) {
+      toast.error("Erro ao enviar e-mail");
+      console.error("Error sending welcome email:", error);
+    }
+  };
+
+  const openDeleteDialog = (clientId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setClientToDelete(clientId);
+    setDeleteDialogOpen(true);
   };
 
   return (
@@ -129,6 +228,7 @@ const Clients = () => {
                     <TableHead>Nome</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Data de Início</TableHead>
+                    <TableHead className="w-[80px]">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -159,6 +259,41 @@ const Clients = () => {
                           : format(new Date(client.created_at), "dd/MM/yyyy", { locale: ptBR })
                         }
                       </TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Ações</DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={(e) => handleEditClient(client, e)}>
+                              <Edit className="mr-2 h-4 w-4" />
+                              Editar
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={(e) => handleArchiveClient(client.id, client.status, e)}>
+                              <Archive className="mr-2 h-4 w-4" />
+                              {client.status === "Ativo" ? "Arquivar" : "Ativar"}
+                            </DropdownMenuItem>
+                            {client.email && (
+                              <DropdownMenuItem onClick={(e) => handleResendWelcomeEmail(client, e)}>
+                                <Mail className="mr-2 h-4 w-4" />
+                                Reenviar boas-vindas
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem 
+                              onClick={(e) => openDeleteDialog(client.id, e)}
+                              className="text-destructive"
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Excluir
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -170,9 +305,30 @@ const Clients = () => {
 
       <ClientFormDialog
         open={dialogOpen}
-        onOpenChange={setDialogOpen}
+        onOpenChange={(open) => {
+          setDialogOpen(open);
+          if (!open) setSelectedClient(null);
+        }}
         onSuccess={fetchClients}
+        client={selectedClient}
       />
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir este cliente? Esta ação não pode ser desfeita e todos os dados relacionados serão perdidos.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteClient} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

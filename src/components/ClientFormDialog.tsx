@@ -57,9 +57,18 @@ interface ClientFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
+  client?: {
+    id: string;
+    name: string;
+    email: string | null;
+    phone: string | null;
+    company: string | null;
+    start_date: string | null;
+    status: string;
+  } | null;
 }
 
-export function ClientFormDialog({ open, onOpenChange, onSuccess }: ClientFormDialogProps) {
+export function ClientFormDialog({ open, onOpenChange, onSuccess, client }: ClientFormDialogProps) {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
@@ -92,8 +101,22 @@ export function ClientFormDialog({ open, onOpenChange, onSuccess }: ClientFormDi
   useEffect(() => {
     if (open) {
       fetchProducts();
+      if (client) {
+        // Load client data for editing
+        setClientData({
+          name: client.name,
+          email: client.email || "",
+          phone: client.phone || "",
+          company: client.company || "",
+          start_date: client.start_date || "",
+          status: client.status,
+        });
+        setSendWelcomeEmail(false); // Don't send email when editing
+      } else {
+        resetForm();
+      }
     }
-  }, [open]);
+  }, [open, client]);
 
   const fetchProducts = async () => {
     try {
@@ -154,22 +177,43 @@ export function ClientFormDialog({ open, onOpenChange, onSuccess }: ClientFormDi
       const validated = clientSchema.parse(clientData);
       setLoading(true);
 
-      // 1. Create client
-      const { data: newClient, error: clientError } = await supabase
-        .from("clients")
-        .insert([{
-          name: validated.name,
-          email: validated.email || null,
-          phone: clientData.phone || null,
-          company: clientData.company || null,
-          start_date: clientData.start_date || null,
-          status: clientData.status,
-          user_id: user?.id,
-        }])
-        .select()
-        .single();
+      let clientId: string;
 
-      if (clientError) throw clientError;
+      if (client) {
+        // Update existing client
+        const { error: clientError } = await supabase
+          .from("clients")
+          .update({
+            name: validated.name,
+            email: validated.email || null,
+            phone: clientData.phone || null,
+            company: clientData.company || null,
+            start_date: clientData.start_date || null,
+            status: clientData.status,
+          })
+          .eq("id", client.id);
+
+        if (clientError) throw clientError;
+        clientId = client.id;
+      } else {
+        // Create new client
+        const { data: newClient, error: clientError } = await supabase
+          .from("clients")
+          .insert([{
+            name: validated.name,
+            email: validated.email || null,
+            phone: clientData.phone || null,
+            company: clientData.company || null,
+            start_date: clientData.start_date || null,
+            status: clientData.status,
+            user_id: user?.id,
+          }])
+          .select()
+          .single();
+
+        if (clientError) throw clientError;
+        clientId = newClient.id;
+      }
 
       // 2. Create brand identity if any field is filled
       const hasBrandIdentity =
@@ -179,11 +223,11 @@ export function ClientFormDialog({ open, onOpenChange, onSuccess }: ClientFormDi
         brandIdentity.rules_and_observations ||
         brandIdentity.references_links.some((link) => link.trim());
 
-      if (hasBrandIdentity) {
+      if (hasBrandIdentity && !client) {
         const { error: brandError } = await supabase
           .from("brand_identities")
           .insert([{
-            client_id: newClient.id,
+            client_id: clientId,
             color_palette: brandIdentity.color_palette as any,
             typography: brandIdentity.typography as any,
             tone_of_voice: brandIdentity.tone_of_voice || null,
@@ -202,9 +246,9 @@ export function ClientFormDialog({ open, onOpenChange, onSuccess }: ClientFormDi
           service.sla_days
       );
 
-      if (validServices.length > 0) {
+      if (validServices.length > 0 && !client) {
         const servicesToInsert = validServices.map((service) => ({
-          client_id: newClient.id,
+          client_id: clientId,
           product_id: service.product_id,
           negotiated_price: parseFloat(service.negotiated_price).toString(),
           sla_days: parseInt(service.sla_days),
@@ -219,11 +263,11 @@ export function ClientFormDialog({ open, onOpenChange, onSuccess }: ClientFormDi
       }
 
       // Send welcome email if checkbox is marked and email is provided
-      if (sendWelcomeEmail && validated.email) {
+      if (sendWelcomeEmail && validated.email && !client) {
         try {
           await supabase.functions.invoke("send-welcome-client", {
             body: {
-              client_id: newClient.id,
+              client_id: clientId,
               client_name: validated.name,
               client_email: validated.email,
             },
@@ -235,7 +279,7 @@ export function ClientFormDialog({ open, onOpenChange, onSuccess }: ClientFormDi
         }
       }
 
-      toast.success("Cliente criado com sucesso!");
+      toast.success(client ? "Cliente atualizado com sucesso!" : "Cliente criado com sucesso!");
       resetForm();
       onSuccess();
       onOpenChange(false);
@@ -274,9 +318,9 @@ export function ClientFormDialog({ open, onOpenChange, onSuccess }: ClientFormDi
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Novo Cliente</DialogTitle>
+          <DialogTitle>{client ? "Editar Cliente" : "Novo Cliente"}</DialogTitle>
           <DialogDescription>
-            Preencha as informações do cliente em cada aba
+            {client ? "Atualize as informações do cliente" : "Preencha as informações do cliente em cada aba"}
           </DialogDescription>
         </DialogHeader>
 
