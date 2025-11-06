@@ -5,6 +5,7 @@ import { PublicFooter } from "@/components/PublicFooter";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { Card, CardContent } from "@/components/ui/card";
 import { GraduationCap, Briefcase, Award, TrendingUp, Megaphone, Rocket, Palette, Zap, Check } from "lucide-react";
+import samiraImage from "@/assets/samira-gouvea.png";
 
 export default function Fundadora() {
   const expertise = [
@@ -35,15 +36,14 @@ export default function Fundadora() {
         <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-secondary/20 opacity-50" />
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
-            {/* Foto Placeholder */}
+            {/* Foto da Samira */}
             <div className="relative">
               <div className="aspect-square rounded-2xl bg-gradient-to-br from-primary to-secondary p-1">
-                <div className="w-full h-full rounded-2xl bg-[hsl(var(--dark-bg))] flex items-center justify-center">
-                  <div className="text-center space-y-4">
-                    <div className="text-6xl">👩‍💼</div>
-                    <p className="text-sm text-gray-400">Foto Profissional</p>
-                  </div>
-                </div>
+                <img 
+                  src={samiraImage} 
+                  alt="Samira Gouvea - Fundadora Digital Hera" 
+                  className="w-full h-full rounded-2xl object-cover"
+                />
               </div>
             </div>
 

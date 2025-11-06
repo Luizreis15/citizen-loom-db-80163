@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react";
 import { useState } from "react";
-
+import logo from "@/assets/logo-digital-hera.jpg";
 export function PublicHeader() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -20,11 +20,8 @@ export function PublicHeader() {
         <div className="flex items-center justify-between h-16 lg:h-20">
           {/* Logo */}
           <div className="flex items-center">
-            <Link to="/" className="flex items-center space-x-2">
-              <div className="text-2xl font-bold">
-                <span className="text-primary">Digital</span>
-                <span className="text-secondary"> Hera</span>
-              </div>
+            <Link to="/" className="flex items-center hover:opacity-80 transition-opacity">
+              <img src={logo} alt="Digital Hera" className="h-12 w-auto" />
             </Link>
           </div>
 
