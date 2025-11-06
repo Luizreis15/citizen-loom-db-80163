@@ -124,7 +124,7 @@ const handler = async (req: Request): Promise<Response> => {
     for (const recipientEmail of recipients) {
       try {
         await resend.emails.send({
-          from: "Gestão de Projetos <onboarding@resend.dev>",
+          from: "Digital Hera <noreply@digitalhera.com.br>",
           to: [recipientEmail],
           subject: `💬 Novo comentário em ${task.product_name}`,
           html: `

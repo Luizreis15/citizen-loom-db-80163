@@ -148,7 +148,7 @@ const handler = async (req: Request): Promise<Response> => {
         if (managerEmail) {
           try {
             await resend.emails.send({
-              from: "Gestão de Projetos <onboarding@resend.dev>",
+              from: "Digital Hera <noreply@digitalhera.com.br>",
               to: [managerEmail],
               subject: `🔄 Ajustes solicitados em ${productName}`,
               html: `
@@ -184,7 +184,7 @@ const handler = async (req: Request): Promise<Response> => {
         if (assigneeEmail && assigneeEmail !== managerEmail) {
           try {
             await resend.emails.send({
-              from: "Gestão de Projetos <onboarding@resend.dev>",
+              from: "Digital Hera <noreply@digitalhera.com.br>",
               to: [assigneeEmail],
               subject: `🔄 Ajustes solicitados em ${productName}`,
               html: `
@@ -253,7 +253,7 @@ const handler = async (req: Request): Promise<Response> => {
         if (recipients.length > 0) {
           try {
             await resend.emails.send({
-              from: "Gestão de Projetos <onboarding@resend.dev>",
+              from: "Digital Hera <noreply@digitalhera.com.br>",
               to: recipients,
               subject: `✅ Tarefa aprovada: ${(task.products as any)?.name}`,
               html: `

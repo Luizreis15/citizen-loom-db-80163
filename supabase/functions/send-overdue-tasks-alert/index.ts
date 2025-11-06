@@ -79,7 +79,7 @@ const handler = async (req: Request): Promise<Response> => {
 
       try {
         await resend.emails.send({
-          from: "Gestão de Projetos <onboarding@resend.dev>",
+          from: "Digital Hera <noreply@digitalhera.com.br>",
           to: [assignee.assignee_email],
           subject: `⚠️ Você tem ${tasks.length} tarefa${tasks.length !== 1 ? 's' : ''} atrasada${tasks.length !== 1 ? 's' : ''}`,
           html: `

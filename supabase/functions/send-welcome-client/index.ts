@@ -107,7 +107,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Send welcome email
     const emailResponse = await resend.emails.send({
-      from: "Gestão de Projetos <onboarding@resend.dev>",
+      from: "Digital Hera <noreply@digitalhera.com.br>",
       to: [client_email],
       subject: "Bem-vindo(a)! Acesse seu Portal de Projetos",
       html: `
