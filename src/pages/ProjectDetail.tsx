@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { TaskKanban } from "@/components/TaskKanban";
+import { CreateTaskDialog } from "@/components/CreateTaskDialog";
 
 interface Project {
   id: string;
@@ -56,6 +57,7 @@ const ProjectDetail = () => {
   const [project, setProject] = useState<Project | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
   useEffect(() => {
     if (user && id) {
@@ -214,7 +216,7 @@ const ProjectDetail = () => {
               Lista
             </TabsTrigger>
           </TabsList>
-          <Button>
+          <Button onClick={() => setCreateDialogOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
             Nova Tarefa
           </Button>
@@ -229,7 +231,7 @@ const ProjectDetail = () => {
                 <p className="text-sm text-muted-foreground mb-4">
                   Comece adicionando uma tarefa para este projeto
                 </p>
-                <Button>
+                <Button onClick={() => setCreateDialogOpen(true)}>
                   <Plus className="mr-2 h-4 w-4" />
                   Criar Tarefa
                 </Button>
@@ -263,7 +265,7 @@ const ProjectDetail = () => {
                   <p className="text-sm text-muted-foreground mb-4">
                     Comece adicionando uma tarefa para este projeto
                   </p>
-                  <Button>
+                  <Button onClick={() => setCreateDialogOpen(true)}>
                     <Plus className="mr-2 h-4 w-4" />
                     Criar Tarefa
                   </Button>
@@ -321,6 +323,16 @@ const ProjectDetail = () => {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {project && (
+        <CreateTaskDialog
+          open={createDialogOpen}
+          onOpenChange={setCreateDialogOpen}
+          projectId={project.id}
+          clientId={project.client_id}
+          onSuccess={fetchProjectAndTasks}
+        />
+      )}
     </div>
   );
 };
