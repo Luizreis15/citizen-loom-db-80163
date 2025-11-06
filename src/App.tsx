@@ -8,6 +8,10 @@ import Signup from "./pages/Signup";
 import Login from "./pages/Login";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
+import Sobre from "./pages/Sobre";
+import Servicos from "./pages/Servicos";
+import Fundadora from "./pages/Fundadora";
+import Contato from "./pages/Contato";
 import Clients from "./pages/Clients";
 import ClientDetail from "./pages/ClientDetail";
 import ProjectDetail from "./pages/ProjectDetail";
@@ -34,6 +38,10 @@ const App = () => {
           <BrowserRouter>
             <Routes>
               <Route path="/" element={<Index />} />
+              <Route path="/sobre" element={<Sobre />} />
+              <Route path="/servicos" element={<Servicos />} />
+              <Route path="/fundadora" element={<Fundadora />} />
+              <Route path="/contato" element={<Contato />} />
               <Route path="/signup" element={<Signup />} />
               <Route path="/login" element={<Login />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
