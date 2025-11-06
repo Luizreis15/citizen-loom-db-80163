@@ -26,6 +26,8 @@ interface Client {
   phone: string | null;
   company: string | null;
   created_at: string;
+  start_date: string | null;
+  status: string;
   client_services: { is_active: boolean }[];
 }
 
@@ -54,6 +56,8 @@ const Clients = () => {
           phone,
           company,
           created_at,
+          start_date,
+          status,
           client_services(is_active)
         `)
         .order("created_at", { ascending: false });
@@ -69,10 +73,6 @@ const Clients = () => {
     }
   };
 
-  const getClientStatus = (client: Client) => {
-    const hasActiveServices = client.client_services?.some((service) => service.is_active);
-    return hasActiveServices ? "Ativo" : "Inativo";
-  };
 
   const getStatusVariant = (status: string) => {
     return status === "Ativo" ? "default" : "secondary";
@@ -149,14 +149,15 @@ const Clients = () => {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant={getStatusVariant(getClientStatus(client))}>
-                          {getClientStatus(client)}
+                        <Badge variant={getStatusVariant(client.status)}>
+                          {client.status}
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        {format(new Date(client.created_at), "dd/MM/yyyy", {
-                          locale: ptBR,
-                        })}
+                        {client.start_date 
+                          ? format(new Date(client.start_date), "dd/MM/yyyy", { locale: ptBR })
+                          : format(new Date(client.created_at), "dd/MM/yyyy", { locale: ptBR })
+                        }
                       </TableCell>
                     </TableRow>
                   ))}

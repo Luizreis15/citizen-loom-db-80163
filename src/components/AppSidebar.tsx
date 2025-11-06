@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils";
 
 const menuItems = [
   { title: "Dashboard", url: "/dashboard", icon: Home },
-  { title: "Clientes", url: "/clientes", icon: Users },
+  { title: "Clientes", url: "/clients", icon: Users },
   { title: "Projetos", url: "/projetos", icon: FolderKanban },
   { title: "Usuários", url: "/usuarios", icon: UserCog },
   { title: "Relatório Financeiro", url: "/reports/financial", icon: FileText },

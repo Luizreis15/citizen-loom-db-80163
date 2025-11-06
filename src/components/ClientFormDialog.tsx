@@ -70,6 +70,8 @@ export function ClientFormDialog({ open, onOpenChange, onSuccess }: ClientFormDi
     email: "",
     phone: "",
     company: "",
+    start_date: "",
+    status: "Ativo",
   });
   
   // Tab 2: Brand Identity
@@ -159,6 +161,8 @@ export function ClientFormDialog({ open, onOpenChange, onSuccess }: ClientFormDi
           email: validated.email || null,
           phone: clientData.phone || null,
           company: clientData.company || null,
+          start_date: clientData.start_date || null,
+          status: clientData.status,
           user_id: user?.id,
         }])
         .select()
@@ -235,7 +239,7 @@ export function ClientFormDialog({ open, onOpenChange, onSuccess }: ClientFormDi
   };
 
   const resetForm = () => {
-    setClientData({ name: "", email: "", phone: "", company: "" });
+    setClientData({ name: "", email: "", phone: "", company: "", start_date: "", status: "Ativo" });
     setBrandIdentity({
       color_palette: { primary: "#000000", secondary: "#ffffff", accent: "#888888" },
       typography: { heading: "", body: "" },
@@ -307,6 +311,32 @@ export function ClientFormDialog({ open, onOpenChange, onSuccess }: ClientFormDi
                 onChange={(e) => setClientData({ ...clientData, company: e.target.value })}
                 placeholder="Nome da empresa"
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="start_date">Data de Início</Label>
+              <Input
+                id="start_date"
+                type="date"
+                value={clientData.start_date}
+                onChange={(e) => setClientData({ ...clientData, start_date: e.target.value })}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="status">Status</Label>
+              <Select
+                value={clientData.status}
+                onValueChange={(value) => setClientData({ ...clientData, status: value })}
+              >
+                <SelectTrigger id="status">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Ativo">Ativo</SelectItem>
+                  <SelectItem value="Inativo">Inativo</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </TabsContent>
 
