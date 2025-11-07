@@ -75,9 +75,11 @@ const handler = async (req: Request): Promise<Response> => {
       throw tokenError;
     }
 
-    // Create activation link
-    const appUrl = Deno.env.get("VITE_SUPABASE_URL")?.replace('.supabase.co', '') || 'https://ygfanvazmxpdwvrcjtgu.lovable.app';
+    // Create activation link using custom domain
+    const appUrl = Deno.env.get("APP_URL") || 'https://app.digitalhera.com.br';
     const activationLink = `${appUrl}/ativar-conta?token=${token}`;
+    
+    console.log("Generated activation link:", activationLink);
 
     // Send welcome email
     const emailResponse = await resend.emails.send({
