@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { Resend } from "https://esm.sh/resend@4.0.0";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
@@ -8,6 +9,14 @@ const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+
+// Zod validation schema
+const welcomeCollaboratorSchema = z.object({
+  full_name: z.string().min(1, { message: "full_name é obrigatório" }).max(100, { message: "full_name deve ter no máximo 100 caracteres" }),
+  email: z.string().email({ message: "email deve ser válido" }).max(255, { message: "email deve ter no máximo 255 caracteres" }),
+  role_ids: z.array(z.number().int().positive()).min(1, { message: "Pelo menos um role_id é obrigatório" }),
+  client_id: z.string().uuid({ message: "client_id deve ser um UUID válido" }).optional(),
+});
 
 interface WelcomeCollaboratorRequest {
   full_name: string;
@@ -67,7 +76,25 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error("Only admins can create collaborators");
     }
 
-    const { full_name, email, role_ids, client_id }: WelcomeCollaboratorRequest = await req.json();
+    // Parse and validate input with zod
+    const requestBody = await req.json();
+    const validationResult = welcomeCollaboratorSchema.safeParse(requestBody);
+    
+    if (!validationResult.success) {
+      console.error("Input validation failed:", validationResult.error);
+      return new Response(
+        JSON.stringify({ 
+          error: "Dados inválidos", 
+          details: validationResult.error.errors 
+        }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+
+    const { full_name, email, role_ids, client_id } = validationResult.data;
 
     console.log("Creating collaborator:", { full_name, email, role_ids, client_id });
 

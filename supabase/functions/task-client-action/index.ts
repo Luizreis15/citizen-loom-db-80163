@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.79.0";
 import { Resend } from "https://esm.sh/resend@4.0.0";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
@@ -9,6 +10,13 @@ const corsHeaders = {
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type",
 };
+
+// Zod validation schema
+const taskActionSchema = z.object({
+  task_id: z.string().uuid({ message: "task_id deve ser um UUID válido" }),
+  action: z.enum(["solicitar_ajustes", "aprovar"]),
+  comment: z.string().max(1000, { message: "comment deve ter no máximo 1000 caracteres" }).optional(),
+});
 
 interface TaskActionRequest {
   task_id: string;
@@ -39,7 +47,26 @@ const handler = async (req: Request): Promise<Response> => {
       }
     );
 
-    const { task_id, action, comment }: TaskActionRequest = await req.json();
+    // Parse and validate input with zod
+    const requestBody = await req.json();
+    const validationResult = taskActionSchema.safeParse(requestBody);
+    
+    if (!validationResult.success) {
+      console.error("Input validation failed:", validationResult.error);
+      return new Response(
+        JSON.stringify({ 
+          success: false,
+          error: "Dados inválidos", 
+          details: validationResult.error.errors 
+        }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+
+    const { task_id, action, comment } = validationResult.data;
 
     console.log(`Processing action: ${action} for task: ${task_id}`);
 

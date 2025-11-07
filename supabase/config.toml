@@ -13,7 +13,7 @@ verify_jwt = true
 verify_jwt = true
 
 [functions.send-welcome-client]
-verify_jwt = false
+verify_jwt = true
 
 [functions.send-welcome-collaborator]
 verify_jwt = true
