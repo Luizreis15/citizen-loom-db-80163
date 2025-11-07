@@ -31,7 +31,12 @@ export default function FirstAccess() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
-  const [activating, setActivating] = useState(false);
+  
+  // Step control states
+  const [validating, setValidating] = useState(false);
+  const [validated, setValidated] = useState(false);
+  const [loggingIn, setLoggingIn] = useState(false);
+  const [success, setSuccess] = useState(false);
   
   const [passwordStrength, setPasswordStrength] = useState<"weak" | "medium" | "strong">("weak");
   const [errors, setErrors] = useState<{ password?: string; confirmPassword?: string }>({});
@@ -118,7 +123,8 @@ export default function FirstAccess() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // STEP 1: Validate and create account
+  const handleValidateAccount = async (e: React.FormEvent) => {
     e.preventDefault();
     
     const validation = passwordSchema.safeParse({ password, confirmPassword });
@@ -141,24 +147,29 @@ export default function FirstAccess() {
       return;
     }
 
-    setActivating(true);
+    setValidating(true);
 
     try {
-      let userId: string;
+      // 1. Check if client already has a user_id (without JOIN to profiles)
+      const { data: existingClient } = await supabase
+        .from("clients")
+        .select("user_id")
+        .eq("id", clientData!.id)
+        .single();
 
-      // 1. Check if client already has a user_id linked to a different email
-      if (clientData!.email) {
-        const { data: existingClient } = await supabase
-          .from("clients")
-          .select(`
-            user_id,
-            profiles!inner(email)
-          `)
-          .eq("id", clientData!.id)
-          .single();
+      // If client has user_id, try to verify if it's linked to correct email
+      if (existingClient?.user_id) {
+        console.log("Client already has user_id, checking if it's correct...");
+        
+        // Try to login with current email - if fails, user_id is wrong
+        const { error: testLoginError } = await supabase.auth.signInWithPassword({
+          email: clientData!.email,
+          password: "test-incorrect-password", // Wrong password on purpose
+        });
 
-        // If client has user_id but linked to different email, clear it
-        if (existingClient?.user_id && existingClient.profiles?.email !== clientData!.email) {
+        // If error is NOT "Invalid login credentials", it means email is not registered
+        // So the user_id is linked to a different email - clear it
+        if (!testLoginError?.message.includes('Invalid login credentials')) {
           console.log("Client has user_id linked to different email, clearing link...");
           
           const { error: clearError } = await supabase
@@ -176,49 +187,48 @@ export default function FirstAccess() {
         }
       }
 
-      // 2. Try to login first (user might already exist from previous attempts)
-      const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
+      // 2. Check if user already exists (from previous attempt)
+      const { error: checkError } = await supabase.auth.signInWithPassword({
         email: clientData!.email,
         password: password,
       });
 
-      if (loginError) {
-        // If login fails with invalid credentials, user doesn't exist yet - create it
-        if (loginError.message.includes('Invalid login credentials')) {
-          const { data: userData, error: signUpError } = await supabase.auth.signUp({
-            email: clientData!.email,
-            password: password,
-            options: {
-              emailRedirectTo: `${window.location.origin}/client-portal/tasks`,
-              data: {
-                full_name: clientData!.name,
-              }
+      let userId: string;
+
+      if (checkError && checkError.message.includes('Invalid login credentials')) {
+        // User doesn't exist - create it
+        const { data: userData, error: signUpError } = await supabase.auth.signUp({
+          email: clientData!.email,
+          password: password,
+          options: {
+            emailRedirectTo: `${window.location.origin}/client-portal/tasks`,
+            data: {
+              full_name: clientData!.name,
             }
-          });
+          }
+        });
 
-          if (signUpError) throw signUpError;
-          if (!userData.user) throw new Error("User creation failed");
+        if (signUpError) throw signUpError;
+        if (!userData.user) throw new Error("User creation failed");
 
-          userId = userData.user.id;
-
-          // Auto login after creating user
-          const { error: autoLoginError } = await supabase.auth.signInWithPassword({
-            email: clientData!.email,
-            password: password,
-          });
-
-          if (autoLoginError) throw autoLoginError;
-        } else {
-          // Other login error - throw it
-          throw loginError;
-        }
+        userId = userData.user.id;
+        
+        // Sign out immediately after creating
+        await supabase.auth.signOut();
+      } else if (!checkError) {
+        // User exists and password is correct
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error("Failed to get user");
+        userId = user.id;
+        
+        // Sign out - we'll login again in step 2
+        await supabase.auth.signOut();
       } else {
-        // Login successful - user already exists
-        if (!loginData.user) throw new Error("Login failed");
-        userId = loginData.user.id;
+        // Other error
+        throw checkError;
       }
 
-      // 2. Now with authenticated session, mark token as used
+      // 3. Mark token as used (without auth required)
       const { error: tokenError } = await supabase
         .from("activation_tokens")
         .update({ used_at: new Date().toISOString() })
@@ -226,7 +236,7 @@ export default function FirstAccess() {
 
       if (tokenError) throw tokenError;
 
-      // 3. Update client record
+      // 4. Update client record (without auth required)
       const { error: clientError } = await supabase
         .from("clients")
         .update({
@@ -238,33 +248,67 @@ export default function FirstAccess() {
 
       if (clientError) throw clientError;
 
-      // 4. Update profile with client_id
+      toast({
+        title: "Cadastro validado!",
+        description: "Agora você pode fazer login para acessar sua área.",
+      });
+
+      setValidated(true);
+
+    } catch (error: any) {
+      console.error("Error validating account:", error);
+      toast({
+        title: "Erro ao validar cadastro",
+        description: error.message || "Ocorreu um erro. Por favor, tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setValidating(false);
+    }
+  };
+
+  // STEP 2: Login with created account
+  const handleLogin = async () => {
+    setLoggingIn(true);
+
+    try {
+      const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
+        email: clientData!.email,
+        password: password,
+      });
+
+      if (loginError) throw loginError;
+      if (!loginData.user) throw new Error("Login failed");
+
+      // Update profile with client_id
       const { error: profileError } = await supabase
         .from("profiles")
         .update({ client_id: clientData!.id })
-        .eq("id", userId);
+        .eq("id", loginData.user.id);
 
       if (profileError) console.error("Error updating profile:", profileError);
 
       toast({
-        title: "Conta ativada com sucesso!",
+        title: "Login realizado com sucesso!",
         description: "Bem-vindo(a) à Digital Hera!",
       });
 
-      // 5. Redirect to client portal
+      setSuccess(true);
+
+      // Redirect to client portal
       setTimeout(() => {
         navigate("/client-portal/tasks");
       }, 1000);
 
     } catch (error: any) {
-      console.error("Error activating account:", error);
+      console.error("Error logging in:", error);
       toast({
-        title: "Erro ao ativar conta",
-        description: error.message || "Ocorreu um erro. Por favor, tente novamente ou entre em contato.",
+        title: "Erro ao fazer login",
+        description: error.message || "Ocorreu um erro. Por favor, tente novamente.",
         variant: "destructive",
       });
     } finally {
-      setActivating(false);
+      setLoggingIn(false);
     }
   };
 
@@ -313,13 +357,39 @@ export default function FirstAccess() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-primary/10 via-background to-accent/10 p-4">
       <div className="w-full max-w-md space-y-6 rounded-lg border bg-card p-8 shadow-lg">
-        {activating ? (
+        {success ? (
           <div className="flex flex-col items-center gap-4 py-8">
             <div className="rounded-full bg-primary/10 p-4">
               <CheckCircle2 className="h-12 w-12 animate-pulse text-primary" />
             </div>
-            <p className="text-lg font-medium">Conta ativada!</p>
-            <p className="text-sm text-muted-foreground">Redirecionando...</p>
+            <p className="text-lg font-medium">Login realizado com sucesso!</p>
+            <p className="text-sm text-muted-foreground">Redirecionando para sua área...</p>
+          </div>
+        ) : validated ? (
+          <div className="flex flex-col items-center gap-6 py-4">
+            <div className="rounded-full bg-green-500/10 p-4">
+              <CheckCircle2 className="h-12 w-12 text-green-500" />
+            </div>
+            <div className="space-y-2 text-center">
+              <h2 className="text-2xl font-bold text-foreground">Cadastro Validado!</h2>
+              <p className="text-muted-foreground">
+                Sua conta foi criada com sucesso. Agora você pode fazer login.
+              </p>
+            </div>
+            <Button
+              onClick={handleLogin}
+              className="w-full"
+              disabled={loggingIn}
+            >
+              {loggingIn ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Fazendo login...
+                </>
+              ) : (
+                "Fazer Login"
+              )}
+            </Button>
           </div>
         ) : (
           <>
@@ -331,7 +401,7 @@ export default function FirstAccess() {
               </p>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleValidateAccount} className="space-y-6">
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input
@@ -424,15 +494,15 @@ export default function FirstAccess() {
               <Button
                 type="submit"
                 className="w-full"
-                disabled={!isFormValid || activating}
+                disabled={!isFormValid || validating}
               >
-                {activating ? (
+                {validating ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Ativando conta...
+                    Validando cadastro...
                   </>
                 ) : (
-                  "Ativar Conta e Fazer Login"
+                  "Validar Cadastro"
                 )}
               </Button>
             </form>
