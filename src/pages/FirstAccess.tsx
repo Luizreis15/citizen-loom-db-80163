@@ -144,21 +144,51 @@ export default function FirstAccess() {
     setActivating(true);
 
     try {
-      // 1. Create user in Supabase Auth
-      const { data: userData, error: signUpError } = await supabase.auth.signUp({
+      let userId: string;
+
+      // 1. Try to login first (user might already exist from previous attempts)
+      const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
         email: clientData!.email,
         password: password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/client-portal/tasks`,
-          data: {
-            full_name: clientData!.name,
-          }
-        }
       });
 
-      if (signUpError) throw signUpError;
+      if (loginError) {
+        // If login fails with invalid credentials, user doesn't exist yet - create it
+        if (loginError.message.includes('Invalid login credentials')) {
+          const { data: userData, error: signUpError } = await supabase.auth.signUp({
+            email: clientData!.email,
+            password: password,
+            options: {
+              emailRedirectTo: `${window.location.origin}/client-portal/tasks`,
+              data: {
+                full_name: clientData!.name,
+              }
+            }
+          });
 
-      // 2. Mark token as used
+          if (signUpError) throw signUpError;
+          if (!userData.user) throw new Error("User creation failed");
+
+          userId = userData.user.id;
+
+          // Auto login after creating user
+          const { error: autoLoginError } = await supabase.auth.signInWithPassword({
+            email: clientData!.email,
+            password: password,
+          });
+
+          if (autoLoginError) throw autoLoginError;
+        } else {
+          // Other login error - throw it
+          throw loginError;
+        }
+      } else {
+        // Login successful - user already exists
+        if (!loginData.user) throw new Error("Login failed");
+        userId = loginData.user.id;
+      }
+
+      // 2. Now with authenticated session, mark token as used
       const { error: tokenError } = await supabase
         .from("activation_tokens")
         .update({ used_at: new Date().toISOString() })
@@ -171,7 +201,7 @@ export default function FirstAccess() {
         .from("clients")
         .update({
           status: "Ativo",
-          user_id: userData.user!.id,
+          user_id: userId,
           activated_at: new Date().toISOString(),
         })
         .eq("id", clientData!.id);
@@ -182,24 +212,16 @@ export default function FirstAccess() {
       const { error: profileError } = await supabase
         .from("profiles")
         .update({ client_id: clientData!.id })
-        .eq("id", userData.user!.id);
+        .eq("id", userId);
 
       if (profileError) console.error("Error updating profile:", profileError);
-
-      // 5. Auto login
-      const { error: loginError } = await supabase.auth.signInWithPassword({
-        email: clientData!.email,
-        password: password,
-      });
-
-      if (loginError) throw loginError;
 
       toast({
         title: "Conta ativada com sucesso!",
         description: "Bem-vindo(a) à Digital Hera!",
       });
 
-      // 6. Redirect to client portal
+      // 5. Redirect to client portal
       setTimeout(() => {
         navigate("/client-portal/tasks");
       }, 1000);
