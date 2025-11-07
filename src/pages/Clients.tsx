@@ -12,7 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Users, MoreVertical, Edit, Archive, Trash2, Mail } from "lucide-react";
+import { Plus, Users, MoreVertical, Edit, Archive, Trash2, Mail, Eye } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -281,6 +281,14 @@ const Clients = () => {
                               <Edit className="mr-2 h-4 w-4" />
                               Editar
                             </DropdownMenuItem>
+                            <DropdownMenuItem onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/client-portal/tasks?client_id=${client.id}`);
+                            }}>
+                              <Eye className="mr-2 h-4 w-4" />
+                              Ver como Cliente
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
                             <DropdownMenuItem onClick={(e) => handleArchiveClient(client.id, client.status, e)}>
                               <Archive className="mr-2 h-4 w-4" />
                               {client.status === "Ativo" ? "Arquivar" : "Ativar"}

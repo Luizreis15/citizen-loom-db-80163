@@ -5,6 +5,7 @@ import { useUserRole } from "@/hooks/useUserRole";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { AppHeader } from "@/components/AppHeader";
+import { AdminViewingBanner } from "@/components/AdminViewingBanner";
 
 export function AuthLayout() {
   const { user, loading } = useAuth();
@@ -18,7 +19,10 @@ export function AuthLayout() {
     }
   }, [user, loading, navigate]);
 
-  // Redirect clients to their portal
+  // Check if user is admin
+  const isAdmin = role === "Owner" || role === "Admin";
+  
+  // Redirect clients to their portal (but not admins)
   useEffect(() => {
     if (!loading && !roleLoading && user && role === "Cliente") {
       if (!location.pathname.startsWith("/client-portal")) {
@@ -39,11 +43,14 @@ export function AuthLayout() {
     return null;
   }
 
-  // Client portal layout (no sidebar)
-  if (role === "Cliente") {
+  // Client portal layout (no sidebar) or Admin viewing as client
+  if (role === "Cliente" || (isAdmin && location.pathname.startsWith("/client-portal"))) {
+    const showAdminBanner = isAdmin && location.pathname.startsWith("/client-portal");
+    
     return (
       <div className="flex min-h-screen w-full flex-col">
-        <AppHeader showSidebarTrigger={false} />
+        {showAdminBanner && <AdminViewingBanner />}
+        <AppHeader showSidebarTrigger={false} clientSelector={isAdmin} />
         <main className="flex-1 p-6 bg-muted/30">
           <Outlet />
         </main>

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -8,6 +8,7 @@ import { ptBR } from "date-fns/locale/pt-BR";
 import { toast } from "sonner";
 import { Calendar, User, Package } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useUserRole } from "@/hooks/useUserRole";
 
 interface Task {
   id: string;
@@ -90,8 +91,13 @@ function getDueDateColorClass(dueDate: string): string {
 
 const ClientPortalTasks = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const { role } = useUserRole();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  const isAdmin = role === "Owner" || role === "Admin";
+  const viewingClientId = searchParams.get("client_id");
 
   useEffect(() => {
     fetchTasks();
@@ -115,20 +121,43 @@ const ClientPortalTasks = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [viewingClientId]);
 
   const fetchTasks = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      
+      let query = supabase
         .from("tasks")
         .select(`
           *,
           products(name),
           profiles(full_name),
-          projects(name)
+          projects(name, client_id)
         `)
         .order("due_date", { ascending: true });
+      
+      // If admin is viewing a specific client, filter by that client's projects
+      if (isAdmin && viewingClientId) {
+        const { data: clientProjects, error: projectsError } = await supabase
+          .from("projects")
+          .select("id")
+          .eq("client_id", viewingClientId);
+        
+        if (projectsError) throw projectsError;
+        
+        const projectIds = clientProjects?.map(p => p.id) || [];
+        if (projectIds.length > 0) {
+          query = query.in("project_id", projectIds);
+        } else {
+          // No projects for this client, return empty
+          setTasks([]);
+          setLoading(false);
+          return;
+        }
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
       
@@ -185,7 +214,12 @@ const ClientPortalTasks = () => {
                   <Card 
                     key={task.id} 
                     className="hover:shadow-md transition-shadow cursor-pointer"
-                    onClick={() => navigate(`/client-portal/tasks/${task.id}`)}
+                    onClick={() => {
+                      const url = viewingClientId 
+                        ? `/client-portal/tasks/${task.id}?client_id=${viewingClientId}`
+                        : `/client-portal/tasks/${task.id}`;
+                      navigate(url);
+                    }}
                   >
                     <CardHeader className="p-4 pb-3">
                       <div className="flex items-start justify-between gap-2">

@@ -11,13 +11,54 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface AppHeaderProps {
   showSidebarTrigger?: boolean;
+  clientSelector?: boolean;
 }
 
-export function AppHeader({ showSidebarTrigger = true }: AppHeaderProps) {
+interface Client {
+  id: string;
+  name: string;
+}
+
+export function AppHeader({ showSidebarTrigger = true, clientSelector = false }: AppHeaderProps) {
   const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const [clients, setClients] = useState<Client[]>([]);
+  const currentClientId = searchParams.get("client_id");
+
+  useEffect(() => {
+    if (clientSelector) {
+      fetchClients();
+    }
+  }, [clientSelector]);
+
+  const fetchClients = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("clients")
+        .select("id, name")
+        .eq("status", "Ativo")
+        .order("name");
+
+      if (error) throw error;
+      setClients(data || []);
+    } catch (error) {
+      console.error("Error fetching clients:", error);
+    }
+  };
 
   const getUserInitials = () => {
     if (!user?.email) return "U";
@@ -32,6 +73,26 @@ export function AppHeader({ showSidebarTrigger = true }: AppHeaderProps) {
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="flex h-14 items-center gap-4 px-4">
         {showSidebarTrigger && <SidebarTrigger />}
+        
+        {clientSelector && (
+          <Select
+            value={currentClientId || ""}
+            onValueChange={(clientId) => {
+              navigate(`/client-portal/tasks?client_id=${clientId}`);
+            }}
+          >
+            <SelectTrigger className="w-[250px]">
+              <SelectValue placeholder="Selecionar cliente..." />
+            </SelectTrigger>
+            <SelectContent>
+              {clients.map((client) => (
+                <SelectItem key={client.id} value={client.id}>
+                  {client.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
         
         <div className="flex-1" />
 

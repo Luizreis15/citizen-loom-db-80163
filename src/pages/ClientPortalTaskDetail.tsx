@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useUserRole } from "@/hooks/useUserRole";
+import { AdminViewingBanner } from "@/components/AdminViewingBanner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -57,13 +59,18 @@ interface Comment {
 const ClientPortalTaskDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user } = useAuth();
+  const { role } = useUserRole();
   const [task, setTask] = useState<Task | null>(null);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState("");
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  
+  const isAdmin = role === "Owner" || role === "Admin";
+  const viewingClientId = searchParams.get("client_id");
 
   useEffect(() => {
     fetchTaskDetails();
@@ -299,7 +306,12 @@ const ClientPortalTaskDetail = () => {
     return (
       <div className="flex flex-col items-center justify-center py-8 space-y-4">
         <p className="text-muted-foreground">Tarefa não encontrada</p>
-        <Button onClick={() => navigate("/client-portal/tasks")}>
+        <Button onClick={() => {
+          const url = viewingClientId 
+            ? `/client-portal/tasks?client_id=${viewingClientId}`
+            : "/client-portal/tasks";
+          navigate(url);
+        }}>
           <ArrowLeft className="mr-2 h-4 w-4" />
           Voltar
         </Button>
@@ -309,11 +321,18 @@ const ClientPortalTaskDetail = () => {
 
   return (
     <div className="space-y-6">
+      {isAdmin && viewingClientId && <AdminViewingBanner />}
+      
       <div className="flex items-center gap-4">
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => navigate("/client-portal/tasks")}
+          onClick={() => {
+            const url = viewingClientId 
+              ? `/client-portal/tasks?client_id=${viewingClientId}`
+              : "/client-portal/tasks";
+            navigate(url);
+          }}
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
           Voltar
