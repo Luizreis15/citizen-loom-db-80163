@@ -285,10 +285,10 @@ const Clients = () => {
                               <Archive className="mr-2 h-4 w-4" />
                               {client.status === "Ativo" ? "Arquivar" : "Ativar"}
                             </DropdownMenuItem>
-                            {client.email && client.status === "Pendente" && (
+                            {client.email && (
                               <DropdownMenuItem onClick={(e) => handleResendWelcomeEmail(client, e)}>
                                 <Mail className="mr-2 h-4 w-4" />
-                                Reenviar email de ativação
+                                Reenviar boas-vindas
                               </DropdownMenuItem>
                             )}
                             <DropdownMenuSeparator />
