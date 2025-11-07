@@ -96,7 +96,15 @@ const Clients = () => {
 
 
   const getStatusVariant = (status: string) => {
-    return status === "Ativo" ? "default" : "secondary";
+    if (status === "Ativo") return "default";
+    if (status === "Pendente") return "secondary";
+    return "outline"; // Inativo
+  };
+
+  const getStatusLabel = (status: string) => {
+    if (status === "Ativo") return "Ativo";
+    if (status === "Pendente") return "Pendente";
+    return "Inativo";
   };
 
   const handleEditClient = (client: Client, e: React.MouseEvent) => {
@@ -250,7 +258,7 @@ const Clients = () => {
                       </TableCell>
                       <TableCell>
                         <Badge variant={getStatusVariant(client.status)}>
-                          {client.status}
+                          {getStatusLabel(client.status)}
                         </Badge>
                       </TableCell>
                       <TableCell>
@@ -277,10 +285,10 @@ const Clients = () => {
                               <Archive className="mr-2 h-4 w-4" />
                               {client.status === "Ativo" ? "Arquivar" : "Ativar"}
                             </DropdownMenuItem>
-                            {client.email && (
+                            {client.email && client.status === "Pendente" && (
                               <DropdownMenuItem onClick={(e) => handleResendWelcomeEmail(client, e)}>
                                 <Mail className="mr-2 h-4 w-4" />
-                                Reenviar boas-vindas
+                                Reenviar email de ativação
                               </DropdownMenuItem>
                             )}
                             <DropdownMenuSeparator />

@@ -14,6 +14,41 @@ export type Database = {
   }
   public: {
     Tables: {
+      activation_tokens: {
+        Row: {
+          client_id: string
+          created_at: string | null
+          expires_at: string
+          id: string
+          token: string
+          used_at: string | null
+        }
+        Insert: {
+          client_id: string
+          created_at?: string | null
+          expires_at: string
+          id?: string
+          token: string
+          used_at?: string | null
+        }
+        Update: {
+          client_id?: string
+          created_at?: string | null
+          expires_at?: string
+          id?: string
+          token?: string
+          used_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activation_tokens_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       brand_identities: {
         Row: {
           client_id: string
@@ -108,6 +143,7 @@ export type Database = {
       }
       clients: {
         Row: {
+          activated_at: string | null
           company: string | null
           created_at: string
           email: string | null
@@ -120,6 +156,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          activated_at?: string | null
           company?: string | null
           created_at?: string
           email?: string | null
@@ -132,6 +169,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          activated_at?: string | null
           company?: string | null
           created_at?: string
           email?: string | null

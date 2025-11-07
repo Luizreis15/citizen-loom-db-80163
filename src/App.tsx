@@ -8,6 +8,7 @@ import Signup from "./pages/Signup";
 import Login from "./pages/Login";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
+import FirstAccess from "./pages/FirstAccess";
 import Sobre from "./pages/Sobre";
 import Servicos from "./pages/Servicos";
 import Fundadora from "./pages/Fundadora";
@@ -46,6 +47,7 @@ const App = () => {
               <Route path="/login" element={<Login />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/ativar-conta" element={<FirstAccess />} />
               
               <Route element={<AuthLayout />}>
                 <Route path="/dashboard" element={<Dashboard />} />

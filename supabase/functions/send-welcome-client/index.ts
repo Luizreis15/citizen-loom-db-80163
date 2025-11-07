@@ -36,80 +36,54 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("Creating welcome email for client:", { client_id, client_name, client_email });
 
-    // Check if user already exists
-    const { data: existingUser } = await supabaseAdmin.auth.admin.listUsers();
-    const userExists = existingUser?.users.find(u => u.email === client_email);
+    // Check if there's an existing unused token for this client
+    const { data: existingToken } = await supabaseAdmin
+      .from("activation_tokens")
+      .select("id")
+      .eq("client_id", client_id)
+      .is("used_at", null)
+      .gt("expires_at", new Date().toISOString())
+      .single();
 
-    let userId: string;
+    // If exists, invalidate it
+    if (existingToken) {
+      console.log("Invalidating existing token:", existingToken.id);
+      await supabaseAdmin
+        .from("activation_tokens")
+        .update({ used_at: new Date().toISOString() })
+        .eq("id", existingToken.id);
+    }
 
-    if (userExists) {
-      console.log("User already exists:", userExists.id);
-      userId = userExists.id;
-    } else {
-      // Create user in Supabase Auth
-      const { data: newUser, error: createUserError } = await supabaseAdmin.auth.admin.createUser({
-        email: client_email,
-        email_confirm: true,
-        user_metadata: {
-          full_name: client_name,
-        },
+    // Generate new activation token
+    const token = crypto.randomUUID();
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7); // 7 days expiration
+
+    console.log("Creating new activation token with expiration:", expiresAt);
+
+    // Save token to database
+    const { error: tokenError } = await supabaseAdmin
+      .from("activation_tokens")
+      .insert({
+        client_id,
+        token,
+        expires_at: expiresAt.toISOString(),
       });
 
-      if (createUserError) {
-        console.error("Error creating user:", createUserError);
-        throw createUserError;
-      }
-
-      userId = newUser.user.id;
-      console.log("Created new user:", userId);
-
-      // Update profile with client_id
-      const { error: profileError } = await supabaseAdmin
-        .from("profiles")
-        .update({ client_id })
-        .eq("id", userId);
-
-      if (profileError) {
-        console.error("Error updating profile:", profileError);
-      }
-
-      // Assign 'Cliente' role
-      const { data: clientRole } = await supabaseAdmin
-        .from("roles")
-        .select("id")
-        .eq("name", "Cliente")
-        .single();
-
-      if (clientRole) {
-        const { error: roleError } = await supabaseAdmin
-          .from("user_roles")
-          .insert({ user_id: userId, role_id: clientRole.id });
-
-        if (roleError) {
-          console.error("Error assigning role:", roleError);
-        }
-      }
+    if (tokenError) {
+      console.error("Error creating activation token:", tokenError);
+      throw tokenError;
     }
 
-    // Generate magic link for password setup
-    const { data: magicLinkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
-      type: "magiclink",
-      email: client_email,
-      options: {
-        redirectTo: `${Deno.env.get("SUPABASE_URL")?.replace('.supabase.co', '')}/client-portal/tasks`,
-      },
-    });
-
-    if (linkError) {
-      console.error("Error generating magic link:", linkError);
-      throw linkError;
-    }
+    // Create activation link
+    const appUrl = Deno.env.get("VITE_SUPABASE_URL")?.replace('.supabase.co', '') || 'https://ygfanvazmxpdwvrcjtgu.lovable.app';
+    const activationLink = `${appUrl}/ativar-conta?token=${token}`;
 
     // Send welcome email
     const emailResponse = await resend.emails.send({
       from: "Digital Hera <noreply@digitalhera.com.br>",
       to: [client_email],
-      subject: "Bem-vindo(a)! Acesse seu Portal de Projetos",
+      subject: "Bem-vindo(a)! 🎉 Ative sua conta na Digital Hera",
       html: `
         <!DOCTYPE html>
         <html>
@@ -117,42 +91,63 @@ const handler = async (req: Request): Promise<Response> => {
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
           </head>
-          <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-              <h1 style="color: white; margin: 0; font-size: 28px;">Bem-vindo(a)!</h1>
+          <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f5f5f5;">
+            <div style="background: linear-gradient(135deg, #7C3AED 0%, #F59E0B 100%); padding: 40px 30px; text-align: center; border-radius: 12px 12px 0 0;">
+              <h1 style="color: white; margin: 0; font-size: 32px; font-weight: 700;">🎉 Bem-vindo(a)!</h1>
+              <p style="color: rgba(255, 255, 255, 0.95); margin: 10px 0 0 0; font-size: 18px;">Digital Hera</p>
             </div>
             
-            <div style="background-color: #ffffff; padding: 40px; border: 1px solid #e0e0e0; border-top: none; border-radius: 0 0 10px 10px;">
-              <p style="font-size: 16px; margin-bottom: 20px;">Olá <strong>${client_name}</strong>,</p>
+            <div style="background-color: #ffffff; padding: 40px; border: 1px solid #e0e0e0; border-top: none; border-radius: 0 0 12px 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+              <p style="font-size: 18px; margin-bottom: 20px; color: #1f2937;">Olá <strong style="color: #7C3AED;">${client_name}</strong>,</p>
               
-              <p style="font-size: 16px; margin-bottom: 20px;">
-                É um prazer tê-lo(a) conosco! Sua conta foi criada e você já pode acompanhar todos os projetos e entregas através do nosso portal.
+              <p style="font-size: 16px; margin-bottom: 20px; color: #4b5563;">
+                É um prazer enorme tê-lo(a) conosco! Sua conta foi criada com sucesso e você já pode acompanhar todos os seus projetos e entregas através do nosso portal exclusivo.
               </p>
               
-              <p style="font-size: 16px; margin-bottom: 30px;">
-                Para acessar pela primeira vez e criar sua senha, clique no botão abaixo:
+              <p style="font-size: 16px; margin-bottom: 30px; color: #4b5563;">
+                Para começar, basta criar sua senha de acesso:
               </p>
               
               <div style="text-align: center; margin: 40px 0;">
-                <a href="${magicLinkData.properties.action_link}" 
-                   style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 16px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; display: inline-block;">
-                  Criar Minha Senha
+                <a href="${activationLink}" 
+                   style="background: linear-gradient(135deg, #7C3AED 0%, #F59E0B 100%); color: white; padding: 18px 40px; text-decoration: none; border-radius: 10px; font-weight: 700; font-size: 18px; display: inline-block; box-shadow: 0 4px 12px rgba(124, 58, 237, 0.4); transition: transform 0.2s;">
+                  Ativar Minha Conta
                 </a>
               </div>
               
-              <p style="font-size: 14px; color: #666; margin-top: 30px;">
-                <strong>Importante:</strong> Este link é válido por 24 horas.
-              </p>
+              <div style="background-color: #f9fafb; border-left: 4px solid #7C3AED; padding: 20px; margin: 30px 0; border-radius: 8px;">
+                <p style="margin: 0; font-size: 16px; color: #374151;">
+                  <strong style="color: #7C3AED;">✨ O que você terá acesso:</strong>
+                </p>
+                <ul style="margin: 12px 0 0 0; padding-left: 20px; color: #4b5563; font-size: 15px; line-height: 1.8;">
+                  <li>Acompanhamento de todos os seus projetos em tempo real</li>
+                  <li>Cronograma detalhado com prazos e entregas</li>
+                  <li>Comunicação direta com nossa equipe</li>
+                  <li>Histórico completo de todos os trabalhos realizados</li>
+                </ul>
+              </div>
               
-              <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 30px 0;">
+              <div style="background-color: #fef3c7; border: 1px solid #fbbf24; padding: 16px; border-radius: 8px; margin: 30px 0;">
+                <p style="margin: 0; font-size: 14px; color: #92400e; text-align: center;">
+                  <strong>⚠️ Importante:</strong> Este link é válido por <strong>7 dias</strong>. Após esse período, será necessário solicitar um novo link de ativação.
+                </p>
+              </div>
               
-              <p style="font-size: 14px; color: #666;">
-                Qualquer dúvida, estamos à disposição!
+              <hr style="border: none; border-top: 2px solid #e5e7eb; margin: 30px 0;">
+              
+              <p style="font-size: 15px; color: #6b7280; text-align: center; margin: 0;">
+                Qualquer dúvida, estamos à disposição!<br>
+                <strong style="color: #7C3AED;">Equipe Digital Hera</strong>
               </p>
             </div>
             
-            <div style="text-align: center; margin-top: 20px; color: #999; font-size: 12px;">
-              <p>Este é um email automático, por favor não responda.</p>
+            <div style="text-align: center; margin-top: 30px; padding: 20px;">
+              <p style="color: #9ca3af; font-size: 12px; margin: 0;">
+                Este é um email automático, por favor não responda.
+              </p>
+              <p style="color: #d1d5db; font-size: 11px; margin: 10px 0 0 0;">
+                Digital Hera © 2025 - Todos os direitos reservados
+              </p>
             </div>
           </body>
         </html>

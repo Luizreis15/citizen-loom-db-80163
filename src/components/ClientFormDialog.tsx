@@ -80,7 +80,7 @@ export function ClientFormDialog({ open, onOpenChange, onSuccess, client }: Clie
     phone: "",
     company: "",
     start_date: "",
-    status: "Ativo",
+    status: "Pendente",
   });
   
   // Tab 2: Brand Identity
@@ -301,7 +301,7 @@ export function ClientFormDialog({ open, onOpenChange, onSuccess, client }: Clie
   };
 
   const resetForm = () => {
-    setClientData({ name: "", email: "", phone: "", company: "", start_date: "", status: "Ativo" });
+    setClientData({ name: "", email: "", phone: "", company: "", start_date: "", status: "Pendente" });
     setBrandIdentity({
       color_palette: { primary: "#000000", secondary: "#ffffff", accent: "#888888" },
       typography: { heading: "", body: "" },
@@ -396,6 +396,7 @@ export function ClientFormDialog({ open, onOpenChange, onSuccess, client }: Clie
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="Pendente">Pendente</SelectItem>
                   <SelectItem value="Ativo">Ativo</SelectItem>
                   <SelectItem value="Inativo">Inativo</SelectItem>
                 </SelectContent>
