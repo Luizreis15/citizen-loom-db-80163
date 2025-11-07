@@ -153,7 +153,7 @@ export type Database = {
           start_date: string | null
           status: string
           updated_at: string
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           activated_at?: string | null
@@ -166,7 +166,7 @@ export type Database = {
           start_date?: string | null
           status?: string
           updated_at?: string
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           activated_at?: string | null
@@ -179,7 +179,7 @@ export type Database = {
           start_date?: string | null
           status?: string
           updated_at?: string
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: [
           {

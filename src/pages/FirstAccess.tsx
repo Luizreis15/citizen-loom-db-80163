@@ -146,7 +146,37 @@ export default function FirstAccess() {
     try {
       let userId: string;
 
-      // 1. Try to login first (user might already exist from previous attempts)
+      // 1. Check if client already has a user_id linked to a different email
+      if (clientData!.email) {
+        const { data: existingClient } = await supabase
+          .from("clients")
+          .select(`
+            user_id,
+            profiles!inner(email)
+          `)
+          .eq("id", clientData!.id)
+          .single();
+
+        // If client has user_id but linked to different email, clear it
+        if (existingClient?.user_id && existingClient.profiles?.email !== clientData!.email) {
+          console.log("Client has user_id linked to different email, clearing link...");
+          
+          const { error: clearError } = await supabase
+            .from("clients")
+            .update({ 
+              user_id: null,
+              status: "Pendente",
+              activated_at: null 
+            })
+            .eq("id", clientData!.id);
+
+          if (clearError) {
+            console.error("Error clearing incorrect user_id link:", clearError);
+          }
+        }
+      }
+
+      // 2. Try to login first (user might already exist from previous attempts)
       const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
         email: clientData!.email,
         password: password,
