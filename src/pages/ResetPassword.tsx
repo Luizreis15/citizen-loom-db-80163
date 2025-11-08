@@ -1,12 +1,14 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
 import { z } from "zod";
+import { AlertCircle, Loader2 } from "lucide-react";
 
 const passwordSchema = z.object({
   password: z.string().min(6, "A senha deve ter no mínimo 6 caracteres"),
@@ -18,12 +20,63 @@ const passwordSchema = z.object({
 
 const ResetPassword = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [formData, setFormData] = useState({
     password: "",
     confirmPassword: "",
   });
   const [loading, setLoading] = useState(false);
+  const [validatingToken, setValidatingToken] = useState(true);
+  const [tokenValid, setTokenValid] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Validate token on mount
+  useEffect(() => {
+    const validateToken = async () => {
+      const token = searchParams.get('token');
+      
+      if (!token) {
+        toast.error("Link de recuperação inválido");
+        setTokenValid(false);
+        setValidatingToken(false);
+        return;
+      }
+
+      try {
+        // Check if there's an active recovery session
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) throw error;
+        
+        if (session?.user) {
+          setTokenValid(true);
+          console.log("Valid recovery session found");
+        } else {
+          // Try to verify the token by exchanging it
+          const { error: verifyError } = await supabase.auth.verifyOtp({
+            token_hash: token,
+            type: 'recovery'
+          });
+          
+          if (verifyError) {
+            console.error("Token verification failed:", verifyError);
+            toast.error("Link de recuperação expirado ou inválido");
+            setTokenValid(false);
+          } else {
+            setTokenValid(true);
+          }
+        }
+      } catch (error: any) {
+        console.error("Error validating token:", error);
+        toast.error("Erro ao validar link de recuperação");
+        setTokenValid(false);
+      } finally {
+        setValidatingToken(false);
+      }
+    };
+
+    validateToken();
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,10 +90,22 @@ const ResetPassword = () => {
         password: validated.password,
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error updating password:", error);
+        if (error.message.includes("session")) {
+          throw new Error("Sessão de recuperação expirada. Solicite um novo link.");
+        }
+        throw error;
+      }
 
-      toast.success("Senha atualizada com sucesso!");
-      navigate("/login");
+      toast.success("Senha atualizada com sucesso! Redirecionando para o login...");
+      
+      // Sign out to force login with new password
+      await supabase.auth.signOut();
+      
+      setTimeout(() => {
+        navigate("/login");
+      }, 1500);
     } catch (error) {
       if (error instanceof z.ZodError) {
         const fieldErrors: Record<string, string> = {};
@@ -50,13 +115,59 @@ const ResetPassword = () => {
           }
         });
         setErrors(fieldErrors);
+      } else if (error instanceof Error) {
+        toast.error(error.message);
       } else {
-        toast.error("Erro ao atualizar senha");
+        toast.error("Erro ao atualizar senha. Tente solicitar um novo link.");
       }
     } finally {
       setLoading(false);
     }
   };
+
+  if (validatingToken) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-muted/30 p-4">
+        <Card className="w-full max-w-md">
+          <CardContent className="pt-6 flex flex-col items-center gap-4">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="text-muted-foreground">Validando link de recuperação...</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (!tokenValid) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-muted/30 p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="space-y-1">
+            <CardTitle className="text-2xl font-bold">Link Inválido</CardTitle>
+            <CardDescription>
+              O link de recuperação expirou ou é inválido
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                Este link de recuperação expirou ou já foi utilizado. Por favor, solicite um novo link de recuperação.
+              </AlertDescription>
+            </Alert>
+          </CardContent>
+          <CardFooter>
+            <Button 
+              onClick={() => navigate("/forgot-password")}
+              className="w-full"
+            >
+              Solicitar Novo Link
+            </Button>
+          </CardFooter>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted/30 p-4">
@@ -106,7 +217,14 @@ const ResetPassword = () => {
               className="w-full" 
               disabled={loading}
             >
-              {loading ? "Atualizando..." : "Atualizar Senha"}
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Atualizando...
+                </>
+              ) : (
+                "Atualizar Senha"
+              )}
             </Button>
           </CardFooter>
         </form>

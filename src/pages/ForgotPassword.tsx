@@ -27,8 +27,9 @@ const ForgotPassword = () => {
     try {
       const validated = emailSchema.parse({ email });
       
-      const { error } = await supabase.auth.resetPasswordForEmail(validated.email, {
-        redirectTo: `${window.location.origin}/reset-password`,
+      // Call edge function to send password reset email
+      const { error } = await supabase.functions.invoke('send-password-reset', {
+        body: { email: validated.email }
       });
 
       if (error) throw error;
@@ -46,6 +47,7 @@ const ForgotPassword = () => {
         setErrors(fieldErrors);
       } else {
         toast.error("Erro ao enviar e-mail de recuperação");
+        console.error("Error sending password reset:", error);
       }
     } finally {
       setLoading(false);
