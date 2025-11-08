@@ -166,6 +166,11 @@ const App = () => {
                     <CollaboratorTasks />
                   </ProtectedRoute>
                 } />
+                <Route path="/collaborator/tasks/:id" element={
+                  <ProtectedRoute allowedRoles={["Colaborador", "Editor de Vídeo", "Social Mídia", "Webdesigner", "Administrativo", "Finance"]}>
+                    <ClientPortalTaskDetail />
+                  </ProtectedRoute>
+                } />
               </Route>
               
               <Route path="*" element={<NotFound />} />

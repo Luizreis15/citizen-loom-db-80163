@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -101,6 +102,7 @@ export function TaskKanban({
   onTaskUpdate,
   isCollaboratorView = false 
 }: TaskKanbanProps) {
+  const navigate = useNavigate();
   const [tasks, setTasks] = useState<Task[]>(externalTasks || []);
   const [loading, setLoading] = useState(!externalTasks);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -245,7 +247,16 @@ export function TaskKanban({
           return (
             <DroppableColumn key={status} id={status} status={status} count={statusTasks.length}>
               {statusTasks.map((task) => (
-                <DraggableTaskCard key={task.id} task={task} />
+                <DraggableTaskCard 
+                  key={task.id} 
+                  task={task} 
+                  isCollaboratorView={isCollaboratorView}
+                  onTaskClick={() => {
+                    if (isCollaboratorView) {
+                      navigate(`/collaborator/tasks/${task.id}`);
+                    }
+                  }}
+                />
               ))}
             </DroppableColumn>
           );
@@ -293,7 +304,15 @@ function DroppableColumn({
 }
 
 // Draggable Task Card Component
-function DraggableTaskCard({ task }: { task: Task }) {
+function DraggableTaskCard({ 
+  task, 
+  isCollaboratorView,
+  onTaskClick 
+}: { 
+  task: Task; 
+  isCollaboratorView?: boolean;
+  onTaskClick?: () => void;
+}) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: task.id,
   });
@@ -305,18 +324,32 @@ function DraggableTaskCard({ task }: { task: Task }) {
 
   return (
     <div ref={setNodeRef} style={style} {...listeners} {...attributes}>
-      <TaskCard task={task} />
+      <TaskCard task={task} isCollaboratorView={isCollaboratorView} onTaskClick={onTaskClick} />
     </div>
   );
 }
 
 // Task Card Component
-function TaskCard({ task, isDragging = false }: { task: Task; isDragging?: boolean }) {
+function TaskCard({ 
+  task, 
+  isDragging = false, 
+  isCollaboratorView,
+  onTaskClick 
+}: { 
+  task: Task; 
+  isDragging?: boolean;
+  isCollaboratorView?: boolean;
+  onTaskClick?: () => void;
+}) {
   return (
-    <Card className={cn(
-      "hover:shadow-md transition-shadow cursor-grab active:cursor-grabbing",
-      isDragging && "shadow-lg"
-    )}>
+    <Card 
+      className={cn(
+        "hover:shadow-md transition-shadow",
+        isCollaboratorView ? "cursor-pointer" : "cursor-grab active:cursor-grabbing",
+        isDragging && "shadow-lg"
+      )}
+      onClick={isCollaboratorView ? onTaskClick : undefined}
+    >
       <CardHeader className="p-3 pb-2">
         <CardTitle className="text-sm font-medium">
           {task.products.name}
