@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useNavigate, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
+import { isCollaboratorRole, isClientRole, isAdminRole } from "@/lib/roleUtils";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { AppHeader } from "@/components/AppHeader";
@@ -22,18 +23,18 @@ export function AuthLayout() {
   }, [user, loading, navigate]);
 
   // Check if user is admin
-  const isAdmin = role === "Owner" || role === "Admin";
+  const isAdmin = isAdminRole(role);
   
   // Redirect users based on their role
   useEffect(() => {
     if (!loading && !roleLoading && user) {
       // Redirect clients to their portal
-      if (role === "Cliente" && !location.pathname.startsWith("/client-portal")) {
+      if (isClientRole(role) && !location.pathname.startsWith("/client-portal")) {
         navigate("/client-portal/dashboard");
       }
       
       // Redirect collaborators to their panel
-      if (role === "Colaborador" && !location.pathname.startsWith("/collaborator")) {
+      if (isCollaboratorRole(role) && !location.pathname.startsWith("/collaborator")) {
         navigate("/collaborator/dashboard");
       }
       
@@ -57,7 +58,7 @@ export function AuthLayout() {
   }
 
   // Collaborator panel layout
-  if (role === "Colaborador") {
+  if (isCollaboratorRole(role)) {
     return (
       <div className="flex min-h-screen w-full">
         <CollaboratorSidebar />
@@ -69,7 +70,7 @@ export function AuthLayout() {
   }
 
   // Client portal layout with sidebar
-  if (role === "Cliente" || (isAdmin && location.pathname.startsWith("/client-portal"))) {
+  if (isClientRole(role) || (isAdmin && location.pathname.startsWith("/client-portal"))) {
     const showAdminBanner = isAdmin && location.pathname.startsWith("/client-portal");
     
     return (

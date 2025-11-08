@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useAuth } from "@/hooks/useAuth";
+import { isCollaboratorRole, isClientRole, isAdminRole } from "@/lib/roleUtils";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -22,11 +23,11 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
 
       if (role && !allowedRoles.includes(role)) {
         // Redirect based on role
-        if (role === "Cliente") {
+        if (isClientRole(role)) {
           navigate("/client-portal/dashboard");
-        } else if (role === "Colaborador") {
+        } else if (isCollaboratorRole(role)) {
           navigate("/collaborator/dashboard");
-        } else {
+        } else if (isAdminRole(role)) {
           navigate("/dashboard");
         }
       }

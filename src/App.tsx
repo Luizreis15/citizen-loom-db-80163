@@ -157,12 +157,12 @@ const App = () => {
 
                 {/* Collaborator Routes */}
                 <Route path="/collaborator/dashboard" element={
-                  <ProtectedRoute allowedRoles={["Colaborador"]}>
+                  <ProtectedRoute allowedRoles={["Colaborador", "Editor de Vídeo", "Social Mídia", "Webdesigner", "Administrativo", "Finance"]}>
                     <CollaboratorDashboard />
                   </ProtectedRoute>
                 } />
                 <Route path="/collaborator/tasks" element={
-                  <ProtectedRoute allowedRoles={["Colaborador"]}>
+                  <ProtectedRoute allowedRoles={["Colaborador", "Editor de Vídeo", "Social Mídia", "Webdesigner", "Administrativo", "Finance"]}>
                     <CollaboratorTasks />
                   </ProtectedRoute>
                 } />

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
+import { isCollaboratorRole, isClientRole, isAdminRole } from "@/lib/roleUtils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -27,11 +28,11 @@ const Login = () => {
   // Redirecionar após login baseado no role
   useEffect(() => {
     if (user && !roleLoading && role) {
-      if (role === "Colaborador") {
+      if (isCollaboratorRole(role)) {
         navigate("/collaborator/dashboard");
-      } else if (role === "Cliente") {
+      } else if (isClientRole(role)) {
         navigate("/client-portal/dashboard");
-      } else if (role === "Owner" || role === "Admin") {
+      } else if (isAdminRole(role)) {
         navigate("/dashboard");
       }
     }
