@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -131,7 +132,7 @@ export function CreateCollaboratorDialog({ open, onOpenChange, onSuccess }: Crea
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Novo Colaborador</DialogTitle>
         </DialogHeader>
@@ -163,30 +164,32 @@ export function CreateCollaboratorDialog({ open, onOpenChange, onSuccess }: Crea
 
             <div>
               <Label>Funções / Permissões *</Label>
-              <div className="space-y-3 mt-2 p-4 border rounded-lg">
-                {roles.map((role) => (
-                  <div key={role.id} className="flex items-start space-x-3">
-                    <Checkbox
-                      id={`role-${role.id}`}
-                      checked={formData.selectedRoles.includes(role.id)}
-                      onCheckedChange={(checked) => handleRoleToggle(role.id, checked as boolean)}
-                    />
-                    <div className="flex-1">
-                      <label
-                        htmlFor={`role-${role.id}`}
-                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                      >
-                        {role.name}
-                      </label>
-                      {role.description && (
-                        <p className="text-sm text-muted-foreground mt-1">
-                          {role.description}
-                        </p>
-                      )}
+              <ScrollArea className="h-60 mt-2 border rounded-lg">
+                <div className="space-y-3 p-4">
+                  {roles.map((role) => (
+                    <div key={role.id} className="flex items-start space-x-3">
+                      <Checkbox
+                        id={`role-${role.id}`}
+                        checked={formData.selectedRoles.includes(role.id)}
+                        onCheckedChange={(checked) => handleRoleToggle(role.id, checked as boolean)}
+                      />
+                      <div className="flex-1">
+                        <label
+                          htmlFor={`role-${role.id}`}
+                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                        >
+                          {role.name}
+                        </label>
+                        {role.description && (
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {role.description}
+                          </p>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              </ScrollArea>
             </div>
 
             <div>
