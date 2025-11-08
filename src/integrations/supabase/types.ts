@@ -778,6 +778,10 @@ export type Database = {
         Args: { _role_name: string; _user_id: string }
         Returns: boolean
       }
+      user_is_assigned_to_project: {
+        Args: { _project_id: string; _user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never
