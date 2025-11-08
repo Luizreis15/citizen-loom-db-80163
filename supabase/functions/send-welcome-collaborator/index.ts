@@ -36,16 +36,6 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error("Missing Authorization header");
     }
 
-    const supabaseClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
-      {
-        global: {
-          headers: { Authorization: authHeader },
-        },
-      }
-    );
-
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
@@ -57,22 +47,36 @@ const handler = async (req: Request): Promise<Response> => {
       }
     );
 
-    // Verify user is admin/owner
-    const { data: { user } } = await supabaseClient.auth.getUser();
-    if (!user) {
+    // Extract and verify JWT token
+    const token = authHeader.replace("Bearer ", "");
+    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token);
+    
+    if (userError || !user) {
+      console.error("Auth error:", userError);
       throw new Error("Unauthorized");
     }
 
-    const { data: userRoles } = await supabaseClient
+    console.log("Authenticated user:", user.id, user.email);
+
+    // Check if user is admin/owner using admin client
+    const { data: userRoles, error: rolesError } = await supabaseAdmin
       .from("user_roles")
       .select("role_id, roles(name)")
       .eq("user_id", user.id);
+
+    if (rolesError) {
+      console.error("Error fetching roles:", rolesError);
+      throw new Error("Error verifying permissions");
+    }
+
+    console.log("User roles:", userRoles);
 
     const isAdmin = userRoles?.some((ur: any) => 
       ur.roles?.name === "Admin" || ur.roles?.name === "Owner"
     );
 
     if (!isAdmin) {
+      console.error("User is not admin:", user.email);
       throw new Error("Only admins can create collaborators");
     }
 
