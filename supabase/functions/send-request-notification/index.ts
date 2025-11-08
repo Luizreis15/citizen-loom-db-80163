@@ -31,13 +31,25 @@ const handler = async (req: Request): Promise<Response> => {
       .select(`
         *,
         clients(name, email),
-        products(name),
-        profiles!client_requests_requested_by_fkey(full_name, email)
+        products(name)
       `)
       .eq("id", request_id)
       .single();
 
     if (requestError) throw requestError;
+
+    // Fetch user profile separately
+    const { data: userProfile } = await supabase
+      .from("profiles")
+      .select("full_name, email")
+      .eq("id", request.requested_by)
+      .single();
+
+    // Attach profile to request object
+    const requestWithProfile = {
+      ...request,
+      requestedByProfile: userProfile
+    };
 
     // Send email to admin
     const adminEmail = "leduardoreis@gmail.com"; // You can make this dynamic
@@ -45,15 +57,17 @@ const handler = async (req: Request): Promise<Response> => {
     const emailResponse = await resend.emails.send({
       from: "Digital Hera <onboarding@resend.dev>",
       to: [adminEmail],
-      subject: `Nova Solicitação de ${request.clients.name}`,
+      subject: `Nova Solicitação de ${requestWithProfile.clients.name}`,
       html: `
         <h1>Nova Solicitação Recebida</h1>
-        <p><strong>Cliente:</strong> ${request.clients.name}</p>
-        <p><strong>Serviço:</strong> ${request.products.name}</p>
-        <p><strong>Título:</strong> ${request.title}</p>
-        <p><strong>Prioridade:</strong> ${request.priority}</p>
+        <p><strong>Cliente:</strong> ${requestWithProfile.clients.name}</p>
+        <p><strong>Solicitado por:</strong> ${userProfile?.full_name || 'N/A'} (${userProfile?.email || 'N/A'})</p>
+        <p><strong>Serviço:</strong> ${requestWithProfile.products.name}</p>
+        <p><strong>Título:</strong> ${requestWithProfile.title}</p>
+        <p><strong>Quantidade:</strong> ${requestWithProfile.quantity}</p>
+        <p><strong>Prioridade:</strong> ${requestWithProfile.priority}</p>
         <p><strong>Descrição:</strong></p>
-        <p>${request.description}</p>
+        <p>${requestWithProfile.description}</p>
         <p><a href="${Deno.env.get("APP_URL")}/admin/requests">Visualizar Solicitação</a></p>
       `,
     });
