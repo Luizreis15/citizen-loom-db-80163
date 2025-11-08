@@ -246,7 +246,7 @@ export function ClientFormDialog({ open, onOpenChange, onSuccess, client }: Clie
           service.sla_days
       );
 
-      if (validServices.length > 0 && !client) {
+      if (validServices.length > 0) {
         const servicesToInsert = validServices.map((service) => ({
           client_id: clientId,
           product_id: service.product_id,
@@ -697,7 +697,7 @@ export function ClientFormDialog({ open, onOpenChange, onSuccess, client }: Clie
             Cancelar
           </Button>
           <Button onClick={handleSubmit} disabled={loading}>
-            {loading ? "Salvando..." : "Criar Cliente"}
+            {loading ? "Salvando..." : (client ? "Salvar" : "Criar Cliente")}
           </Button>
         </div>
       </DialogContent>

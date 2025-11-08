@@ -58,13 +58,29 @@ export default function ClientRequestsAdmin() {
           *,
           products(name),
           clients(name),
-          profiles!client_requests_requested_by_fkey(full_name),
           request_attachments(*)
         `)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      setRequests(data || []);
+
+      // Fetch user profiles separately for each request
+      const requestsWithProfiles = await Promise.all(
+        (data || []).map(async (request) => {
+          if (request.requested_by) {
+            const { data: profile } = await supabase
+              .from("profiles")
+              .select("full_name")
+              .eq("id", request.requested_by)
+              .single();
+            
+            return { ...request, requester_profile: profile };
+          }
+          return request;
+        })
+      );
+
+      setRequests(requestsWithProfiles);
     } catch (error) {
       console.error("Error fetching requests:", error);
     } finally {
