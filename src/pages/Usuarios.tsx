@@ -37,7 +37,7 @@ const Usuarios = () => {
           email,
           created_at,
           client_id,
-          clients (name),
+          clients!profiles_client_id_fkey (name),
           user_roles (
             roles (name)
           )
