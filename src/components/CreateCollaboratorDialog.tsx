@@ -34,7 +34,7 @@ export function CreateCollaboratorDialog({ open, onOpenChange, onSuccess }: Crea
     full_name: "",
     email: "",
     selectedRoles: [] as number[],
-    client_id: "",
+    client_id: "none",
   });
 
   useEffect(() => {
@@ -104,7 +104,7 @@ export function CreateCollaboratorDialog({ open, onOpenChange, onSuccess }: Crea
           full_name: formData.full_name,
           email: formData.email,
           role_ids: formData.selectedRoles,
-          client_id: formData.client_id || undefined,
+          client_id: formData.client_id && formData.client_id !== "none" ? formData.client_id : undefined,
         },
       });
 
@@ -116,7 +116,7 @@ export function CreateCollaboratorDialog({ open, onOpenChange, onSuccess }: Crea
         full_name: "",
         email: "",
         selectedRoles: [],
-        client_id: "",
+        client_id: "none",
       });
       
       onOpenChange(false);
@@ -199,7 +199,7 @@ export function CreateCollaboratorDialog({ open, onOpenChange, onSuccess }: Crea
                   <SelectValue placeholder="Selecione um cliente (opcional)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Nenhum cliente</SelectItem>
+                  <SelectItem value="none">Nenhum cliente</SelectItem>
                   {clients.map((client) => (
                     <SelectItem key={client.id} value={client.id}>
                       {client.name}
