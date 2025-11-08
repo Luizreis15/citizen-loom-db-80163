@@ -1,6 +1,7 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { useUserRole } from "@/hooks/useUserRole";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,13 +14,28 @@ const loginSchema = z.object({
 });
 
 const Login = () => {
-  const { signIn, loading } = useAuth();
+  const { signIn, loading, user } = useAuth();
+  const { role, loading: roleLoading } = useUserRole();
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     email: "",
     password: "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Redirecionar após login baseado no role
+  useEffect(() => {
+    if (user && !roleLoading && role) {
+      if (role === "Colaborador") {
+        navigate("/collaborator/dashboard");
+      } else if (role === "Cliente") {
+        navigate("/client-portal/dashboard");
+      } else if (role === "Owner" || role === "Admin") {
+        navigate("/dashboard");
+      }
+    }
+  }, [user, role, roleLoading, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
