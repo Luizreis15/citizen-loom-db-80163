@@ -37,6 +37,7 @@ import CollaboratorTasks from "./pages/CollaboratorTasks";
 import NotFound from "./pages/NotFound";
 import { AuthLayout } from "./components/AuthLayout";
 import { ErrorBoundary } from "./components/ErrorBoundary";
+import { ProtectedRoute } from "./components/ProtectedRoute";
 
 const queryClient = new QueryClient();
 
@@ -62,26 +63,109 @@ const App = () => {
               <Route path="/ativar-colaborador" element={<FirstAccessCollaborator />} />
               
               <Route element={<AuthLayout />}>
-                <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/clients" element={<Clients />} />
-            <Route path="/clients/:id" element={<ClientDetail />} />
-            <Route path="/projects/:id" element={<ProjectDetail />} />
-            <Route path="/projetos" element={<Projetos />} />
-                <Route path="/usuarios" element={<Usuarios />} />
+                {/* Admin/Owner Routes */}
+                <Route path="/dashboard" element={
+                  <ProtectedRoute allowedRoles={["Owner", "Admin"]}>
+                    <Dashboard />
+                  </ProtectedRoute>
+                } />
+                <Route path="/clients" element={
+                  <ProtectedRoute allowedRoles={["Owner", "Admin"]}>
+                    <Clients />
+                  </ProtectedRoute>
+                } />
+                <Route path="/clients/:id" element={
+                  <ProtectedRoute allowedRoles={["Owner", "Admin"]}>
+                    <ClientDetail />
+                  </ProtectedRoute>
+                } />
+                <Route path="/projects/:id" element={
+                  <ProtectedRoute allowedRoles={["Owner", "Admin"]}>
+                    <ProjectDetail />
+                  </ProtectedRoute>
+                } />
+                <Route path="/projetos" element={
+                  <ProtectedRoute allowedRoles={["Owner", "Admin"]}>
+                    <Projetos />
+                  </ProtectedRoute>
+                } />
+                <Route path="/usuarios" element={
+                  <ProtectedRoute allowedRoles={["Owner", "Admin"]}>
+                    <Usuarios />
+                  </ProtectedRoute>
+                } />
+                <Route path="/reports/financial" element={
+                  <ProtectedRoute allowedRoles={["Owner", "Admin"]}>
+                    <FinancialReport />
+                  </ProtectedRoute>
+                } />
+                <Route path="/admin/requests" element={
+                  <ProtectedRoute allowedRoles={["Owner", "Admin"]}>
+                    <ClientRequestsAdmin />
+                  </ProtectedRoute>
+                } />
+
+                {/* Shared Routes */}
                 <Route path="/configuracoes" element={<Configuracoes />} />
-                <Route path="/reports/financial" element={<FinancialReport />} />
-          <Route path="/client-portal/dashboard" element={<ClientPortalDashboard />} />
-          <Route path="/client-portal/request" element={<ClientRequestForm />} />
-          <Route path="/client-portal/requests" element={<ClientRequests />} />
-          <Route path="/client-portal/requests/:id" element={<ClientRequestDetail />} />
-          <Route path="/client-portal/financial" element={<ClientFinancial />} />
-          <Route path="/client-portal/package" element={<ClientPackage />} />
-          <Route path="/client-portal/profile" element={<ClientProfile />} />
-          <Route path="/client-portal/tasks" element={<ClientPortalTasks />} />
-          <Route path="/client-portal/tasks/:id" element={<ClientPortalTaskDetail />} />
-          <Route path="/admin/requests" element={<ClientRequestsAdmin />} />
-          <Route path="/collaborator/dashboard" element={<CollaboratorDashboard />} />
-          <Route path="/collaborator/tasks" element={<CollaboratorTasks />} />
+
+                {/* Client Portal Routes */}
+                <Route path="/client-portal/dashboard" element={
+                  <ProtectedRoute allowedRoles={["Cliente", "Owner", "Admin"]}>
+                    <ClientPortalDashboard />
+                  </ProtectedRoute>
+                } />
+                <Route path="/client-portal/request" element={
+                  <ProtectedRoute allowedRoles={["Cliente", "Owner", "Admin"]}>
+                    <ClientRequestForm />
+                  </ProtectedRoute>
+                } />
+                <Route path="/client-portal/requests" element={
+                  <ProtectedRoute allowedRoles={["Cliente", "Owner", "Admin"]}>
+                    <ClientRequests />
+                  </ProtectedRoute>
+                } />
+                <Route path="/client-portal/requests/:id" element={
+                  <ProtectedRoute allowedRoles={["Cliente", "Owner", "Admin"]}>
+                    <ClientRequestDetail />
+                  </ProtectedRoute>
+                } />
+                <Route path="/client-portal/financial" element={
+                  <ProtectedRoute allowedRoles={["Cliente", "Owner", "Admin"]}>
+                    <ClientFinancial />
+                  </ProtectedRoute>
+                } />
+                <Route path="/client-portal/package" element={
+                  <ProtectedRoute allowedRoles={["Cliente", "Owner", "Admin"]}>
+                    <ClientPackage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/client-portal/profile" element={
+                  <ProtectedRoute allowedRoles={["Cliente", "Owner", "Admin"]}>
+                    <ClientProfile />
+                  </ProtectedRoute>
+                } />
+                <Route path="/client-portal/tasks" element={
+                  <ProtectedRoute allowedRoles={["Cliente", "Owner", "Admin"]}>
+                    <ClientPortalTasks />
+                  </ProtectedRoute>
+                } />
+                <Route path="/client-portal/tasks/:id" element={
+                  <ProtectedRoute allowedRoles={["Cliente", "Owner", "Admin"]}>
+                    <ClientPortalTaskDetail />
+                  </ProtectedRoute>
+                } />
+
+                {/* Collaborator Routes */}
+                <Route path="/collaborator/dashboard" element={
+                  <ProtectedRoute allowedRoles={["Colaborador"]}>
+                    <CollaboratorDashboard />
+                  </ProtectedRoute>
+                } />
+                <Route path="/collaborator/tasks" element={
+                  <ProtectedRoute allowedRoles={["Colaborador"]}>
+                    <CollaboratorTasks />
+                  </ProtectedRoute>
+                } />
               </Route>
               
               <Route path="*" element={<NotFound />} />
