@@ -23,11 +23,11 @@ export function AuthLayout() {
   // Check if user is admin
   const isAdmin = role === "Owner" || role === "Admin";
   
-  // Redirect clients to their portal (but not admins)
+  // Redirect clients to their portal
   useEffect(() => {
     if (!loading && !roleLoading && user && role === "Cliente") {
       if (!location.pathname.startsWith("/client-portal")) {
-        navigate("/client-portal/tasks");
+        navigate("/client-portal/dashboard");
       }
     }
   }, [user, loading, role, roleLoading, location.pathname, navigate]);
