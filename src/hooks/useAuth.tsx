@@ -66,7 +66,6 @@ export function useAuth() {
       if (error) throw error;
 
       toast.success("Login realizado com sucesso!");
-      window.location.href = "/dashboard";
       return { data, error: null };
     } catch (error: any) {
       const message = error.message === "Invalid login credentials"
