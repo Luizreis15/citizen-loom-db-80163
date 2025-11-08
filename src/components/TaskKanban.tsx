@@ -36,7 +36,10 @@ interface Task {
 }
 
 interface TaskKanbanProps {
-  projectId: string;
+  projectId?: string;
+  tasks?: Task[];
+  onTaskUpdate?: () => void;
+  isCollaboratorView?: boolean;
 }
 
 const STATUSES = [
@@ -92,9 +95,14 @@ function getDueDateColorClass(dueDate: string): string {
   return "text-muted-foreground";
 }
 
-export function TaskKanban({ projectId }: TaskKanbanProps) {
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [loading, setLoading] = useState(true);
+export function TaskKanban({ 
+  projectId, 
+  tasks: externalTasks, 
+  onTaskUpdate,
+  isCollaboratorView = false 
+}: TaskKanbanProps) {
+  const [tasks, setTasks] = useState<Task[]>(externalTasks || []);
+  const [loading, setLoading] = useState(!externalTasks);
   const [activeId, setActiveId] = useState<string | null>(null);
 
   const sensors = useSensors(
@@ -106,31 +114,38 @@ export function TaskKanban({ projectId }: TaskKanbanProps) {
   );
 
   useEffect(() => {
-    fetchTasks();
-    
-    // Subscribe to realtime changes
-    const channel = supabase
-      .channel('tasks-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'tasks',
-          filter: `project_id=eq.${projectId}`,
-        },
-        () => {
-          fetchTasks();
-        }
-      )
-      .subscribe();
+    if (externalTasks) {
+      setTasks(externalTasks);
+      setLoading(false);
+    } else if (projectId) {
+      fetchTasks();
+      
+      // Subscribe to realtime changes
+      const channel = supabase
+        .channel('tasks-changes')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'tasks',
+            filter: `project_id=eq.${projectId}`,
+          },
+          () => {
+            fetchTasks();
+          }
+        )
+        .subscribe();
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [projectId]);
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
+  }, [projectId, externalTasks]);
 
   const fetchTasks = async () => {
+    if (!projectId) return;
+    
     try {
       setLoading(true);
       const { data, error } = await supabase
@@ -190,6 +205,11 @@ export function TaskKanban({ projectId }: TaskKanbanProps) {
       if (error) throw error;
 
       toast.success(`Tarefa movida para ${newStatus}`);
+      
+      // Call onTaskUpdate if provided (for collaborator view)
+      if (onTaskUpdate) {
+        onTaskUpdate();
+      }
     } catch (error) {
       console.error("Error updating task status:", error);
       toast.error("Erro ao atualizar status da tarefa");

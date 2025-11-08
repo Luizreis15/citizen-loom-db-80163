@@ -31,6 +31,8 @@ import ClientFinancial from "./pages/ClientFinancial";
 import ClientPackage from "./pages/ClientPackage";
 import ClientProfile from "./pages/ClientProfile";
 import ClientRequestsAdmin from "./pages/admin/ClientRequestsAdmin";
+import CollaboratorDashboard from "./pages/CollaboratorDashboard";
+import CollaboratorTasks from "./pages/CollaboratorTasks";
 import NotFound from "./pages/NotFound";
 import { AuthLayout } from "./components/AuthLayout";
 import { ErrorBoundary } from "./components/ErrorBoundary";
@@ -76,6 +78,8 @@ const App = () => {
           <Route path="/client-portal/tasks" element={<ClientPortalTasks />} />
           <Route path="/client-portal/tasks/:id" element={<ClientPortalTaskDetail />} />
           <Route path="/admin/requests" element={<ClientRequestsAdmin />} />
+          <Route path="/collaborator/dashboard" element={<CollaboratorDashboard />} />
+          <Route path="/collaborator/tasks" element={<CollaboratorTasks />} />
               </Route>
               
               <Route path="*" element={<NotFound />} />
