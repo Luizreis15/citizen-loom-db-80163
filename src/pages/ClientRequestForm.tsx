@@ -10,7 +10,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { FileUpload, UploadedFile } from "@/components/FileUpload";
 import { toast } from "sonner";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, AlertCircle } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function ClientRequestForm() {
   const { user } = useAuth();
@@ -130,6 +131,33 @@ export default function ClientRequestForm() {
       setLoading(false);
     }
   };
+
+  // Show activation required message if client is not activated
+  if (!clientId && !loading) {
+    return (
+      <div className="max-w-3xl mx-auto space-y-6">
+        <Button
+          variant="ghost"
+          onClick={() => navigate("/client-portal/dashboard")}
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Voltar
+        </Button>
+
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Conta não ativada</AlertTitle>
+          <AlertDescription>
+            Sua conta ainda não foi ativada. Por favor, verifique seu email para o link de ativação ou entre em contato com o suporte.
+          </AlertDescription>
+        </Alert>
+        
+        <Button onClick={() => navigate("/contato")} className="w-full">
+          Entrar em Contato com Suporte
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
