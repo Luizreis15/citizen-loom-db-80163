@@ -212,23 +212,17 @@ export default function FirstAccess() {
         if (!userData.user) throw new Error("User creation failed");
 
         userId = userData.user.id;
-        
-        // Sign out immediately after creating
-        await supabase.auth.signOut();
       } else if (!checkError) {
         // User exists and password is correct
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error("Failed to get user");
         userId = user.id;
-        
-        // Sign out - we'll login again in step 2
-        await supabase.auth.signOut();
       } else {
         // Other error
         throw checkError;
       }
 
-      // 3. Mark token as used (without auth required)
+      // 3. Mark token as used
       const { error: tokenError } = await supabase
         .from("activation_tokens")
         .update({ used_at: new Date().toISOString() })
@@ -236,7 +230,7 @@ export default function FirstAccess() {
 
       if (tokenError) throw tokenError;
 
-      // 4. Update client record (without auth required)
+      // 4. Update client record (user is still authenticated)
       const { error: clientError } = await supabase
         .from("clients")
         .update({
@@ -247,6 +241,9 @@ export default function FirstAccess() {
         .eq("id", clientData!.id);
 
       if (clientError) throw clientError;
+
+      // 5. Sign out after all updates are complete
+      await supabase.auth.signOut();
 
       toast({
         title: "Cadastro validado!",
