@@ -16,28 +16,34 @@ export type Database = {
     Tables: {
       activation_tokens: {
         Row: {
-          client_id: string
+          client_id: string | null
           created_at: string | null
           expires_at: string
           id: string
           token: string
           used_at: string | null
+          user_id: string | null
+          user_type: string | null
         }
         Insert: {
-          client_id: string
+          client_id?: string | null
           created_at?: string | null
           expires_at: string
           id?: string
           token: string
           used_at?: string | null
+          user_id?: string | null
+          user_type?: string | null
         }
         Update: {
-          client_id?: string
+          client_id?: string | null
           created_at?: string | null
           expires_at?: string
           id?: string
           token?: string
           used_at?: string | null
+          user_id?: string | null
+          user_type?: string | null
         }
         Relationships: [
           {

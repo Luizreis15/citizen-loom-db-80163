@@ -10,12 +10,12 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Zod validation schema
+// Validation schema
 const welcomeCollaboratorSchema = z.object({
-  full_name: z.string().min(1, { message: "full_name é obrigatório" }).max(100, { message: "full_name deve ter no máximo 100 caracteres" }),
-  email: z.string().email({ message: "email deve ser válido" }).max(255, { message: "email deve ter no máximo 255 caracteres" }),
-  role_ids: z.array(z.number().int().positive()).min(1, { message: "Pelo menos um role_id é obrigatório" }),
-  client_id: z.string().uuid({ message: "client_id deve ser um UUID válido" }).optional(),
+  full_name: z.string().min(1),
+  email: z.string().email(),
+  role_ids: z.array(z.number()).min(1),
+  client_id: z.string().uuid().optional(),
 });
 
 interface WelcomeCollaboratorRequest {
@@ -26,6 +26,7 @@ interface WelcomeCollaboratorRequest {
 }
 
 const handler = async (req: Request): Promise<Response> => {
+  // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -58,7 +59,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("Authenticated user:", user.id, user.email);
 
-    // Check if user is admin/owner using admin client
+    // Check if user is admin/owner
     const { data: userRoles, error: rolesError } = await supabaseAdmin
       .from("user_roles")
       .select("role_id, roles(name)")
@@ -69,8 +70,6 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error("Error verifying permissions");
     }
 
-    console.log("User roles:", userRoles);
-
     const isAdmin = userRoles?.some((ur: any) => 
       ur.roles?.name === "Admin" || ur.roles?.name === "Owner"
     );
@@ -80,40 +79,46 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error("Only admins can create collaborators");
     }
 
-    // Parse and validate input with zod
-    const requestBody = await req.json();
-    const validationResult = welcomeCollaboratorSchema.safeParse(requestBody);
-    
-    if (!validationResult.success) {
-      console.error("Input validation failed:", validationResult.error);
+    // Parse and validate request
+    const body: WelcomeCollaboratorRequest = await req.json();
+    const validation = welcomeCollaboratorSchema.safeParse(body);
+
+    if (!validation.success) {
+      console.error("Validation error:", validation.error);
       return new Response(
-        JSON.stringify({ 
-          error: "Dados inválidos", 
-          details: validationResult.error.errors 
-        }),
-        {
-          status: 400,
-          headers: { "Content-Type": "application/json", ...corsHeaders },
-        }
+        JSON.stringify({ error: "Invalid request data", details: validation.error }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const { full_name, email, role_ids, client_id } = validationResult.data;
+    const { full_name, email, role_ids, client_id } = validation.data;
 
     console.log("Creating collaborator:", { full_name, email, role_ids, client_id });
 
     // Check if user already exists
-    const { data: existingUser } = await supabaseAdmin.auth.admin.listUsers();
-    const userExists = existingUser?.users.find(u => u.email === email);
+    const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
+    const existingUser = existingUsers?.users?.find(u => u.email === email);
 
     let userId: string;
 
-    if (userExists) {
-      console.log("User already exists:", userExists.id);
-      userId = userExists.id;
+    if (existingUser) {
+      console.log("User already exists:", existingUser.id);
+      userId = existingUser.id;
+
+      // Update profile with client_id if provided
+      if (client_id) {
+        const { error: profileError } = await supabaseAdmin
+          .from("profiles")
+          .update({ client_id })
+          .eq("id", userId);
+
+        if (profileError) {
+          console.error("Error updating profile:", profileError);
+        }
+      }
     } else {
-      // Create user in Supabase Auth
-      const { data: newUser, error: createUserError } = await supabaseAdmin.auth.admin.createUser({
+      // Create new user
+      const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
         email,
         email_confirm: true,
         user_metadata: {
@@ -121,40 +126,39 @@ const handler = async (req: Request): Promise<Response> => {
         },
       });
 
-      if (createUserError) {
-        console.error("Error creating user:", createUserError);
-        throw createUserError;
+      if (createError || !newUser?.user) {
+        console.error("Error creating user:", createError);
+        throw new Error("Failed to create user");
       }
 
+      console.log("User created:", newUser.user.id);
       userId = newUser.user.id;
-      console.log("Created new user:", userId);
 
-      // Update profile
-      const profileUpdate: any = {};
+      // Update profile with client_id if provided
       if (client_id) {
-        profileUpdate.client_id = client_id;
-      }
-
-      if (Object.keys(profileUpdate).length > 0) {
         const { error: profileError } = await supabaseAdmin
           .from("profiles")
-          .update(profileUpdate)
+          .update({ client_id })
           .eq("id", userId);
 
         if (profileError) {
           console.error("Error updating profile:", profileError);
         }
       }
+    }
 
-      // Assign roles
-      for (const role_id of role_ids) {
-        const { error: roleError } = await supabaseAdmin
-          .from("user_roles")
-          .insert({ user_id: userId, role_id });
+    // Assign roles to user
+    for (const roleId of role_ids) {
+      const { error: roleError } = await supabaseAdmin
+        .from("user_roles")
+        .insert({
+          user_id: userId,
+          role_id: roleId,
+        });
 
-        if (roleError) {
-          console.error("Error assigning role:", roleError);
-        }
+      if (roleError) {
+        console.error("Error assigning role:", roleError);
+        // Continue with other roles even if one fails
       }
     }
 
@@ -166,96 +170,153 @@ const handler = async (req: Request): Promise<Response> => {
 
     const roleNames = roles?.map(r => r.name).join(", ") || "Colaborador";
 
-    // Generate magic link
-    const { data: magicLinkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
-      type: "magiclink",
-      email,
-      options: {
-        redirectTo: `${Deno.env.get("SUPABASE_URL")?.replace('.supabase.co', '')}/dashboard`,
-      },
-    });
+    // Generate activation token
+    const activationToken = crypto.randomUUID();
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7); // 7 days
 
-    if (linkError) {
-      console.error("Error generating magic link:", linkError);
-      throw linkError;
+    // Insert activation token
+    const { error: tokenError } = await supabaseAdmin
+      .from("activation_tokens")
+      .insert({
+        user_id: userId,
+        client_id: client_id || null,
+        token: activationToken,
+        expires_at: expiresAt.toISOString(),
+        user_type: 'collaborator',
+      });
+
+    if (tokenError) {
+      console.error("Error creating activation token:", tokenError);
+      throw new Error("Failed to create activation token");
     }
+
+    // Generate activation link
+    const appUrl = Deno.env.get("APP_URL") || "https://citizen-loom-db-80163.lovable.app";
+    const activationLink = `${appUrl}/ativar-colaborador?token=${activationToken}`;
+
+    console.log("Activation link generated:", activationLink);
 
     // Send welcome email
     const emailResponse = await resend.emails.send({
-      from: "Digital Hera <noreply@digitalhera.com.br>",
+      from: "Digital Hera <onboarding@resend.dev>",
       to: [email],
-      subject: "Bem-vindo(a) à Equipe!",
+      subject: "Bem-vindo à Equipe Digital Hera! 🎉",
       html: `
         <!DOCTYPE html>
         <html>
           <head>
-            <meta charset="UTF-8">
+            <meta charset="utf-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Bem-vindo à Digital Hera</title>
           </head>
-          <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-              <h1 style="color: white; margin: 0; font-size: 28px;">Bem-vindo(a) à Equipe!</h1>
-            </div>
-            
-            <div style="background-color: #ffffff; padding: 40px; border: 1px solid #e0e0e0; border-top: none; border-radius: 0 0 10px 10px;">
-              <p style="font-size: 16px; margin-bottom: 20px;">Olá <strong>${full_name}</strong>,</p>
-              
-              <p style="font-size: 16px; margin-bottom: 20px;">
-                Você foi adicionado(a) à nossa equipe com as seguintes permissões:
-              </p>
-              
-              <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
-                <p style="margin: 0; font-weight: bold; color: #667eea;">
-                  ${roleNames}
-                </p>
-              </div>
-              
-              <p style="font-size: 16px; margin-bottom: 30px;">
-                Para acessar o sistema pela primeira vez e criar sua senha, clique no botão abaixo:
-              </p>
-              
-              <div style="text-align: center; margin: 40px 0;">
-                <a href="${magicLinkData.properties.action_link}" 
-                   style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 16px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; display: inline-block;">
-                  Criar Minha Senha
-                </a>
-              </div>
-              
-              <p style="font-size: 14px; color: #666; margin-top: 30px;">
-                <strong>Importante:</strong> Este link é válido por 24 horas.
-              </p>
-              
-              <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 30px 0;">
-              
-              <p style="font-size: 14px; color: #666;">
-                Bem-vindo(a) ao time! 🎉
-              </p>
-            </div>
-            
-            <div style="text-align: center; margin-top: 20px; color: #999; font-size: 12px;">
-              <p>Este é um email automático, por favor não responda.</p>
-            </div>
+          <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;">
+            <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f5f5f5;" cellpadding="0" cellspacing="0">
+              <tr>
+                <td align="center" style="padding: 40px 20px;">
+                  <table role="presentation" style="max-width: 600px; width: 100%; border-collapse: collapse; background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);" cellpadding="0" cellspacing="0">
+                    
+                    <!-- Header -->
+                    <tr>
+                      <td style="padding: 40px 40px 20px; text-align: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px 12px 0 0;">
+                        <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 700; letter-spacing: -0.5px;">
+                          Bem-vindo à Digital Hera
+                        </h1>
+                      </td>
+                    </tr>
+                    
+                    <!-- Body -->
+                    <tr>
+                      <td style="padding: 40px;">
+                        <p style="margin: 0 0 20px; color: #333333; font-size: 16px; line-height: 1.6;">
+                          Olá, <strong style="color: #667eea;">${full_name}</strong>!
+                        </p>
+                        
+                        <p style="margin: 0 0 20px; color: #333333; font-size: 16px; line-height: 1.6;">
+                          Você foi convidado(a) para fazer parte da equipe Digital Hera como <strong>${roleNames}</strong>! 🎉
+                        </p>
+                        
+                        <p style="margin: 0 0 30px; color: #666666; font-size: 16px; line-height: 1.6;">
+                          Para começar, você precisa ativar sua conta e criar uma senha de acesso:
+                        </p>
+                        
+                        <!-- CTA Button -->
+                        <table role="presentation" style="width: 100%; border-collapse: collapse;" cellpadding="0" cellspacing="0">
+                          <tr>
+                            <td align="center" style="padding: 0 0 30px;">
+                              <a href="${activationLink}" 
+                                 style="display: inline-block; padding: 16px 40px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 6px rgba(102, 126, 234, 0.3);">
+                                Ativar Minha Conta
+                              </a>
+                            </td>
+                          </tr>
+                        </table>
+                        
+                        <div style="background-color: #f8f9fa; border-left: 4px solid #667eea; padding: 16px; border-radius: 4px; margin-bottom: 30px;">
+                          <p style="margin: 0 0 10px; color: #333333; font-size: 14px; font-weight: 600;">
+                            ⚠️ Importante:
+                          </p>
+                          <p style="margin: 0; color: #666666; font-size: 14px; line-height: 1.5;">
+                            Este link é válido por <strong>7 dias</strong>. Após esse período, será necessário solicitar um novo convite.
+                          </p>
+                        </div>
+                        
+                        <p style="margin: 0 0 10px; color: #666666; font-size: 14px; line-height: 1.6;">
+                          Se o botão não funcionar, copie e cole este link no seu navegador:
+                        </p>
+                        
+                        <p style="margin: 0 0 30px; padding: 12px; background-color: #f8f9fa; border-radius: 4px; word-break: break-all; font-size: 12px; color: #667eea;">
+                          ${activationLink}
+                        </p>
+                        
+                        <p style="margin: 0; color: #666666; font-size: 14px; line-height: 1.6;">
+                          Se você não solicitou este convite ou acredita que recebeu este email por engano, por favor ignore esta mensagem.
+                        </p>
+                      </td>
+                    </tr>
+                    
+                    <!-- Footer -->
+                    <tr>
+                      <td style="padding: 30px 40px; text-align: center; background-color: #f8f9fa; border-radius: 0 0 12px 12px; border-top: 1px solid #e9ecef;">
+                        <p style="margin: 0 0 10px; color: #999999; font-size: 14px;">
+                          Atenciosamente,<br>
+                          <strong style="color: #667eea;">Equipe Digital Hera</strong>
+                        </p>
+                        <p style="margin: 0; color: #999999; font-size: 12px;">
+                          © ${new Date().getFullYear()} Digital Hera. Todos os direitos reservados.
+                        </p>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
           </body>
         </html>
       `,
     });
 
-    console.log("Email sent successfully:", emailResponse);
+    console.log("Email sent:", emailResponse);
 
     return new Response(
-      JSON.stringify({ success: true, user_id: userId }),
+      JSON.stringify({
+        success: true,
+        userId,
+        message: "Collaborator created and welcome email sent successfully",
+      }),
       {
         status: 200,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       }
     );
+
   } catch (error: any) {
-    console.error("Error in send-welcome-collaborator function:", error);
+    console.error("Error in send-welcome-collaborator:", error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: error.message || "Internal server error" }),
       {
         status: 500,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       }
     );
   }
