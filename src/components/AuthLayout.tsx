@@ -6,6 +6,7 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { AppHeader } from "@/components/AppHeader";
 import { AdminViewingBanner } from "@/components/AdminViewingBanner";
+import { ClientPortalSidebar } from "@/components/ClientPortalSidebar";
 
 export function AuthLayout() {
   const { user, loading } = useAuth();
@@ -43,14 +44,14 @@ export function AuthLayout() {
     return null;
   }
 
-  // Client portal layout (no sidebar) or Admin viewing as client
+  // Client portal layout with sidebar
   if (role === "Cliente" || (isAdmin && location.pathname.startsWith("/client-portal"))) {
     const showAdminBanner = isAdmin && location.pathname.startsWith("/client-portal");
     
     return (
-      <div className="flex min-h-screen w-full flex-col">
+      <div className="flex min-h-screen w-full">
         {showAdminBanner && <AdminViewingBanner />}
-        <AppHeader showSidebarTrigger={false} clientSelector={isAdmin} />
+        <ClientPortalSidebar />
         <main className="flex-1 p-6 bg-muted/30">
           <Outlet />
         </main>

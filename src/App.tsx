@@ -58,8 +58,16 @@ const App = () => {
                 <Route path="/usuarios" element={<Usuarios />} />
                 <Route path="/configuracoes" element={<Configuracoes />} />
                 <Route path="/reports/financial" element={<FinancialReport />} />
-                <Route path="/client-portal/tasks" element={<ClientPortalTasks />} />
-                <Route path="/client-portal/tasks/:id" element={<ClientPortalTaskDetail />} />
+          <Route path="/client-portal/dashboard" element={<ClientPortalDashboard />} />
+          <Route path="/client-portal/request" element={<ClientRequestForm />} />
+          <Route path="/client-portal/requests" element={<ClientRequests />} />
+          <Route path="/client-portal/requests/:id" element={<ClientRequestDetail />} />
+          <Route path="/client-portal/financial" element={<ClientFinancial />} />
+          <Route path="/client-portal/package" element={<ClientPackage />} />
+          <Route path="/client-portal/profile" element={<ClientProfile />} />
+          <Route path="/client-portal/tasks" element={<ClientPortalTasks />} />
+          <Route path="/client-portal/tasks/:id" element={<ClientPortalTaskDetail />} />
+          <Route path="/admin/requests" element={<ClientRequestsAdmin />} />
               </Route>
               
               <Route path="*" element={<NotFound />} />
