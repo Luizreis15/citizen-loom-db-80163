@@ -269,13 +269,20 @@ export default function ClientRequestsAdmin() {
               )}
 
               <div className="flex gap-2">
-                <Dialog>
+                <Dialog onOpenChange={(open) => {
+                  if (open) {
+                    setSelectedRequest(request);
+                  } else {
+                    setSelectedRequest(null);
+                    setReviewNotes("");
+                    setTaskData({ project_id: "", assignee_id: "", due_date: "" });
+                  }
+                }}>
                   <DialogTrigger asChild>
                     <Button
                       variant="default"
                       size="sm"
                       disabled={request.status !== "Pendente"}
-                      onClick={() => setSelectedRequest(request)}
                     >
                       <CheckCircle className="mr-2 h-4 w-4" />
                       Aprovar
@@ -300,7 +307,7 @@ export default function ClientRequestsAdmin() {
                           </SelectTrigger>
                           <SelectContent>
                             {projects
-                              .filter(p => p.client_id === selectedRequest?.client_id)
+                              .filter(p => p.client_id === request.client_id)
                               .map(project => (
                                 <SelectItem key={project.id} value={project.id}>
                                   {project.name}
@@ -348,9 +355,6 @@ export default function ClientRequestsAdmin() {
                       </div>
                     </div>
                     <DialogFooter>
-                      <Button variant="outline" onClick={() => setSelectedRequest(null)}>
-                        Cancelar
-                      </Button>
                       <Button onClick={handleApprove}>
                         Aprovar e Criar Tarefa
                       </Button>
@@ -358,13 +362,19 @@ export default function ClientRequestsAdmin() {
                   </DialogContent>
                 </Dialog>
 
-                <Dialog>
+                <Dialog onOpenChange={(open) => {
+                  if (open) {
+                    setSelectedRequest(request);
+                  } else {
+                    setSelectedRequest(null);
+                    setReviewNotes("");
+                  }
+                }}>
                   <DialogTrigger asChild>
                     <Button
                       variant="destructive"
                       size="sm"
                       disabled={request.status !== "Pendente"}
-                      onClick={() => setSelectedRequest(request)}
                     >
                       <XCircle className="mr-2 h-4 w-4" />
                       Recusar
@@ -384,9 +394,6 @@ export default function ClientRequestsAdmin() {
                       rows={4}
                     />
                     <DialogFooter>
-                      <Button variant="outline" onClick={() => setSelectedRequest(null)}>
-                        Cancelar
-                      </Button>
                       <Button variant="destructive" onClick={handleReject}>
                         Confirmar Recusa
                       </Button>
