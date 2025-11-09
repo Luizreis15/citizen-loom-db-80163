@@ -315,6 +315,11 @@ export default function ClientRequestsAdmin() {
                               ))}
                           </SelectContent>
                         </Select>
+                        {projects.filter(p => p.client_id === request.client_id).length === 0 && (
+                          <p className="text-sm text-destructive">
+                            Este cliente não possui projetos ativos. Crie um projeto primeiro.
+                          </p>
+                        )}
                       </div>
 
                       <div className="space-y-2">
