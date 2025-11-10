@@ -151,14 +151,20 @@ const handler = async (req: Request): Promise<Response> => {
     for (const roleId of role_ids) {
       const { error: roleError } = await supabaseAdmin
         .from("user_roles")
-        .insert({
-          user_id: userId,
-          role_id: roleId,
-        });
+        .upsert(
+          {
+            user_id: userId,
+            role_id: roleId,
+          },
+          {
+            onConflict: 'user_id,role_id',
+            ignoreDuplicates: false
+          }
+        );
 
       if (roleError) {
         console.error("Error assigning role:", roleError);
-        // Continue with other roles even if one fails
+        throw new Error(`Failed to assign role ${roleId}`);
       }
     }
 
@@ -199,7 +205,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Send welcome email
     const emailResponse = await resend.emails.send({
-      from: "Digital Hera <onboarding@resend.dev>",
+      from: "Digital Hera <noreply@digitalhera.com.br>",
       to: [email],
       subject: "Bem-vindo à Equipe Digital Hera! 🎉",
       html: `

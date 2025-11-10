@@ -46,7 +46,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Send email to client
     const emailResponse = await resend.emails.send({
-      from: "Digital Hera <onboarding@resend.dev>",
+      from: "Digital Hera <noreply@digitalhera.com.br>",
       to: [request.clients.email],
       subject: `Atualização da sua solicitação - ${request.title}`,
       html: `

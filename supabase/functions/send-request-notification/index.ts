@@ -55,7 +55,7 @@ const handler = async (req: Request): Promise<Response> => {
     const adminEmail = "leduardoreis@gmail.com"; // You can make this dynamic
 
     const emailResponse = await resend.emails.send({
-      from: "Digital Hera <onboarding@resend.dev>",
+      from: "Digital Hera <noreply@digitalhera.com.br>",
       to: [adminEmail],
       subject: `Nova Solicitação de ${requestWithProfile.clients.name}`,
       html: `
