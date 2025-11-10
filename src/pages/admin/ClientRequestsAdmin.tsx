@@ -31,17 +31,14 @@ export default function ClientRequestsAdmin() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
   const [reviewNotes, setReviewNotes] = useState("");
-  const [projects, setProjects] = useState<any[]>([]);
   const [collaborators, setCollaborators] = useState<any[]>([]);
   const [taskData, setTaskData] = useState({
-    project_id: "",
     assignee_id: "",
     due_date: ""
   });
 
   useEffect(() => {
     fetchRequests();
-    fetchProjects();
     fetchCollaborators();
   }, []);
 
@@ -88,36 +85,48 @@ export default function ClientRequestsAdmin() {
     }
   };
 
-  const fetchProjects = async () => {
-    const { data } = await supabase
-      .from("projects")
-      .select("id, name, client_id")
-      .eq("status", "Ativo");
-    setProjects(data || []);
-  };
-
   const fetchCollaborators = async () => {
-    const { data } = await supabase
-      .from("profiles")
-      .select(`
-        id,
-        full_name,
-        user_roles!inner(
-          roles!inner(
-            name
-          )
-        )
-      `)
-      .in("user_roles.roles.name", [
+    try {
+      // 1. Buscar todos os profiles
+      const { data: profiles, error: profilesError } = await supabase
+        .from("profiles")
+        .select("id, full_name, email");
+      
+      if (profilesError) throw profilesError;
+      if (!profiles) return;
+
+      // 2. Para cada profile, buscar roles usando RPC
+      const collaboratorsWithRoles = await Promise.all(
+        profiles.map(async (profile) => {
+          const { data: rolesData } = await supabase
+            .rpc('get_user_roles', { _user_id: profile.id });
+          
+          return {
+            ...profile,
+            roles: rolesData || []
+          };
+        })
+      );
+
+      // 3. Filtrar apenas quem tem roles de colaborador
+      const collaboratorRoles = [
         "Colaborador",
         "Editor de Vídeo",
         "Social Mídia",
         "Webdesigner",
         "Administrativo",
         "Finance"
-      ]);
-    
-    setCollaborators(data || []);
+      ];
+
+      const filteredCollaborators = collaboratorsWithRoles.filter(user => 
+        user.roles.some((role: any) => collaboratorRoles.includes(role.role_name))
+      );
+
+      setCollaborators(filteredCollaborators);
+    } catch (error) {
+      console.error("Error fetching collaborators:", error);
+      setCollaborators([]);
+    }
   };
 
   const filterRequests = () => {
@@ -129,8 +138,8 @@ export default function ClientRequestsAdmin() {
   };
 
   const handleApprove = async () => {
-    if (!selectedRequest || !taskData.project_id || !taskData.due_date) {
-      toast.error("Preencha todos os campos obrigatórios");
+    if (!selectedRequest || !selectedRequest.project_id || !taskData.due_date) {
+      toast.error("Esta solicitação não tem projeto associado ou falta a data de entrega");
       return;
     }
 
@@ -142,8 +151,7 @@ export default function ClientRequestsAdmin() {
           status: "Aprovado",
           reviewed_by: (await supabase.auth.getUser()).data.user?.id,
           reviewed_at: new Date().toISOString(),
-          review_notes: reviewNotes,
-          project_id: taskData.project_id
+          review_notes: reviewNotes
         })
         .eq("id", selectedRequest.id);
 
@@ -153,7 +161,7 @@ export default function ClientRequestsAdmin() {
       const { error: taskError } = await supabase.functions.invoke("create-task", {
         body: {
           request_id: selectedRequest.id,
-          project_id: taskData.project_id,
+          project_id: selectedRequest.project_id,
           product_id: selectedRequest.product_id,
           assignee_id: taskData.assignee_id || null,
           due_date: taskData.due_date,
@@ -175,7 +183,7 @@ export default function ClientRequestsAdmin() {
       toast.success("Solicitação aprovada e tarefa criada!");
       setSelectedRequest(null);
       setReviewNotes("");
-      setTaskData({ project_id: "", assignee_id: "", due_date: "" });
+      setTaskData({ assignee_id: "", due_date: "" });
       fetchRequests();
     } catch (error: any) {
       console.error("Error approving request:", error);
@@ -292,7 +300,7 @@ export default function ClientRequestsAdmin() {
                   } else {
                     setSelectedRequest(null);
                     setReviewNotes("");
-                    setTaskData({ project_id: "", assignee_id: "", due_date: "" });
+                    setTaskData({ assignee_id: "", due_date: "" });
                   }
                 }}>
                   <DialogTrigger asChild>
@@ -313,32 +321,6 @@ export default function ClientRequestsAdmin() {
                       </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4">
-                      <div className="space-y-2">
-                        <Label>Projeto</Label>
-                        <Select
-                          value={taskData.project_id}
-                          onValueChange={(value) => setTaskData({ ...taskData, project_id: value })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione o projeto" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {projects
-                              .filter(p => p.client_id === request.client_id)
-                              .map(project => (
-                                <SelectItem key={project.id} value={project.id}>
-                                  {project.name}
-                                </SelectItem>
-                              ))}
-                          </SelectContent>
-                        </Select>
-                        {projects.filter(p => p.client_id === request.client_id).length === 0 && (
-                          <p className="text-sm text-destructive">
-                            Este cliente não possui projetos ativos. Crie um projeto primeiro.
-                          </p>
-                        )}
-                      </div>
-
                       <div className="space-y-2">
                         <Label>Responsável (opcional)</Label>
                         <Select
