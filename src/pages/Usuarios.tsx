@@ -31,8 +31,10 @@ const Usuarios = () => {
   }, []);
 
   const fetchUsers = async () => {
+    setLoading(true);
     try {
-      const { data, error } = await supabase
+      // Buscar profiles primeiro
+      const { data: profiles, error: profilesError } = await supabase
         .from("profiles")
         .select(`
           id,
@@ -40,26 +42,44 @@ const Usuarios = () => {
           email,
           created_at,
           client_id,
-          clients!profiles_client_id_fkey (name),
-          user_roles (
-            roles (name)
-          )
+          clients!profiles_client_id_fkey (name)
         `)
         .order("created_at", { ascending: false });
 
-      if (error) throw error;
+      if (profilesError) throw profilesError;
 
-      const formattedUsers = data?.map((user: any) => ({
-        id: user.id,
-        full_name: user.full_name,
-        email: user.email,
-        created_at: user.created_at,
-        client_id: user.client_id,
-        clients: user.clients,
-        roles: user.user_roles?.map((ur: any) => ({ name: ur.roles?.name })) || [],
-      })) || [];
+      // Para cada profile, buscar roles usando a RPC
+      const usersWithRoles = await Promise.all(
+        (profiles || []).map(async (profile: any) => {
+          const { data: rolesData, error: rolesError } = await supabase
+            .rpc('get_user_roles', { _user_id: profile.id });
 
-      setUsers(formattedUsers);
+          if (rolesError) {
+            console.error(`Error fetching roles for user ${profile.id}:`, rolesError);
+            return {
+              id: profile.id,
+              full_name: profile.full_name,
+              email: profile.email,
+              created_at: profile.created_at,
+              client_id: profile.client_id,
+              clients: profile.clients,
+              roles: []
+            };
+          }
+
+          return {
+            id: profile.id,
+            full_name: profile.full_name,
+            email: profile.email,
+            created_at: profile.created_at,
+            client_id: profile.client_id,
+            clients: profile.clients,
+            roles: (rolesData || []).map((r: any) => ({ name: r.role_name }))
+          };
+        })
+      );
+
+      setUsers(usersWithRoles);
     } catch (error: any) {
       console.error("Error fetching users:", error);
       toast.error("Erro ao carregar usuários");
