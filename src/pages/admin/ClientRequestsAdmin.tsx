@@ -99,7 +99,24 @@ export default function ClientRequestsAdmin() {
   const fetchCollaborators = async () => {
     const { data } = await supabase
       .from("profiles")
-      .select("id, full_name");
+      .select(`
+        id,
+        full_name,
+        user_roles!inner(
+          roles!inner(
+            name
+          )
+        )
+      `)
+      .in("user_roles.roles.name", [
+        "Colaborador",
+        "Editor de Vídeo",
+        "Social Mídia",
+        "Webdesigner",
+        "Administrativo",
+        "Finance"
+      ]);
+    
     setCollaborators(data || []);
   };
 
