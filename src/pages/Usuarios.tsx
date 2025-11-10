@@ -3,10 +3,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { UserCog, UserPlus, Mail } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { UserCog, UserPlus, Mail, Video, Palette, Share2, Briefcase, DollarSign, User, Shield, Crown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { CreateCollaboratorDialog } from "@/components/CreateCollaboratorDialog";
+import { isCollaboratorRole, isAdminRole, isClientRole } from "@/lib/roleUtils";
 
 interface UserWithRoles {
   id: string;
@@ -86,6 +89,57 @@ const Usuarios = () => {
     }
   };
 
+  // Filtrar usuários por tipo
+  const collaborators = users.filter(u => 
+    u.roles.some(r => isCollaboratorRole(r.name))
+  );
+  const clients = users.filter(u => 
+    u.roles.some(r => isClientRole(r.name))
+  );
+  const admins = users.filter(u => 
+    u.roles.some(r => isAdminRole(r.name))
+  );
+
+  // Agrupar colaboradores por função
+  const groupedCollaborators = {
+    "Editor de Vídeo": {
+      users: collaborators.filter(c => c.roles.some(r => r.name === "Editor de Vídeo")),
+      icon: Video,
+      color: "text-purple-500"
+    },
+    "Webdesigner": {
+      users: collaborators.filter(c => c.roles.some(r => r.name === "Webdesigner")),
+      icon: Palette,
+      color: "text-pink-500"
+    },
+    "Social Mídia": {
+      users: collaborators.filter(c => c.roles.some(r => r.name === "Social Mídia")),
+      icon: Share2,
+      color: "text-blue-500"
+    },
+    "Administrativo": {
+      users: collaborators.filter(c => c.roles.some(r => r.name === "Administrativo")),
+      icon: Briefcase,
+      color: "text-orange-500"
+    },
+    "Finance": {
+      users: collaborators.filter(c => c.roles.some(r => r.name === "Finance")),
+      icon: DollarSign,
+      color: "text-green-500"
+    },
+    "Colaborador": {
+      users: collaborators.filter(c => c.roles.some(r => r.name === "Colaborador")),
+      icon: User,
+      color: "text-gray-500"
+    }
+  };
+
+  const getRoleIcon = (roleName: string) => {
+    if (roleName === "Owner") return <Crown className="h-4 w-4 text-yellow-500" />;
+    if (roleName === "Admin") return <Shield className="h-4 w-4 text-blue-500" />;
+    return null;
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -101,70 +155,198 @@ const Usuarios = () => {
         </Button>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <UserCog className="h-5 w-5" />
-            Lista de Usuários
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <p className="text-sm text-muted-foreground">Carregando...</p>
-          ) : users.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Nenhum usuário encontrado.</p>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nome</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Funções</TableHead>
-                  <TableHead>Cliente Vinculado</TableHead>
-                  <TableHead>Criado em</TableHead>
-                  <TableHead>Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {users.map((user) => (
-                  <TableRow key={user.id}>
-                    <TableCell className="font-medium">{user.full_name}</TableCell>
-                    <TableCell>{user.email}</TableCell>
-                    <TableCell>
-                      <div className="flex gap-1 flex-wrap">
-                        {user.roles.map((role, idx) => (
-                          <Badge key={idx} variant="secondary">
-                            {role.name}
-                          </Badge>
-                        ))}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {user.clients?.name ? (
-                        <Badge variant="outline">{user.clients.name}</Badge>
-                      ) : (
-                        <span className="text-muted-foreground text-sm">-</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {new Date(user.created_at).toLocaleDateString("pt-BR")}
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => handleResendWelcome(user.email, user.id)}
-                      >
-                        <Mail className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+      <Tabs defaultValue="collaborators" className="space-y-4">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="collaborators">
+            Colaboradores ({collaborators.length})
+          </TabsTrigger>
+          <TabsTrigger value="clients">
+            Clientes ({clients.length})
+          </TabsTrigger>
+          <TabsTrigger value="admins">
+            Administradores ({admins.length})
+          </TabsTrigger>
+        </TabsList>
+
+        {/* ABA COLABORADORES */}
+        <TabsContent value="collaborators">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <UserCog className="h-5 w-5" />
+                Colaboradores por Função
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                <p className="text-sm text-muted-foreground">Carregando...</p>
+              ) : collaborators.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Nenhum colaborador encontrado.</p>
+              ) : (
+                <Accordion type="multiple" className="w-full">
+                  {Object.entries(groupedCollaborators).map(([role, { users: roleUsers, icon: Icon, color }]) => {
+                    if (roleUsers.length === 0) return null;
+                    
+                    return (
+                      <AccordionItem key={role} value={role}>
+                        <AccordionTrigger>
+                          <div className="flex items-center gap-2">
+                            <Icon className={`h-5 w-5 ${color}`} />
+                            <span className="font-medium">{role}</span>
+                            <Badge variant="secondary">{roleUsers.length}</Badge>
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent>
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>Nome</TableHead>
+                                <TableHead>Email</TableHead>
+                                <TableHead>Criado em</TableHead>
+                                <TableHead>Ações</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {roleUsers.map((user) => (
+                                <TableRow key={user.id}>
+                                  <TableCell className="font-medium">{user.full_name}</TableCell>
+                                  <TableCell>{user.email}</TableCell>
+                                  <TableCell>
+                                    {new Date(user.created_at).toLocaleDateString("pt-BR")}
+                                  </TableCell>
+                                  <TableCell>
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={() => handleResendWelcome(user.email, user.id)}
+                                    >
+                                      <Mail className="h-4 w-4" />
+                                    </Button>
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </AccordionContent>
+                      </AccordionItem>
+                    );
+                  })}
+                </Accordion>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ABA CLIENTES */}
+        <TabsContent value="clients">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <User className="h-5 w-5" />
+                Clientes
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                <p className="text-sm text-muted-foreground">Carregando...</p>
+              ) : clients.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Nenhum cliente encontrado.</p>
+              ) : (
+                <div className="space-y-4">
+                  <div className="rounded-lg bg-muted/50 p-4">
+                    <p className="text-sm text-muted-foreground">
+                      💡 Clientes são gerenciados na aba <strong>Clientes</strong>
+                    </p>
+                  </div>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Nome</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Cliente Vinculado</TableHead>
+                        <TableHead>Criado em</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {clients.map((user) => (
+                        <TableRow key={user.id}>
+                          <TableCell className="font-medium">{user.full_name}</TableCell>
+                          <TableCell>{user.email}</TableCell>
+                          <TableCell>
+                            {user.clients?.name ? (
+                              <Badge variant="outline">{user.clients.name}</Badge>
+                            ) : (
+                              <span className="text-muted-foreground text-sm">-</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {new Date(user.created_at).toLocaleDateString("pt-BR")}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ABA ADMINISTRADORES */}
+        <TabsContent value="admins">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Shield className="h-5 w-5" />
+                Administradores
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                <p className="text-sm text-muted-foreground">Carregando...</p>
+              ) : admins.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Nenhum administrador encontrado.</p>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Nome</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Função</TableHead>
+                      <TableHead>Criado em</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {admins.map((user) => (
+                      <TableRow key={user.id}>
+                        <TableCell className="font-medium">{user.full_name}</TableCell>
+                        <TableCell>{user.email}</TableCell>
+                        <TableCell>
+                          <div className="flex gap-1 flex-wrap">
+                            {user.roles.map((role, idx) => (
+                              <Badge 
+                                key={idx} 
+                                variant={role.name === "Owner" ? "default" : "secondary"}
+                                className="flex items-center gap-1"
+                              >
+                                {getRoleIcon(role.name)}
+                                {role.name}
+                              </Badge>
+                            ))}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {new Date(user.created_at).toLocaleDateString("pt-BR")}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       <CreateCollaboratorDialog
         open={dialogOpen}
