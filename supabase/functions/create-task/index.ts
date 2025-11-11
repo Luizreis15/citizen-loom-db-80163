@@ -11,7 +11,6 @@ const corsHeaders = {
 
 interface CreateTaskPayload {
   request_id: string;
-  project_id: string;
   product_id: number;
   assignee_id?: string;
   due_date: string;
@@ -27,7 +26,6 @@ const handler = async (req: Request): Promise<Response> => {
   try {
     const {
       request_id,
-      project_id,
       product_id,
       assignee_id,
       due_date,
@@ -37,18 +35,23 @@ const handler = async (req: Request): Promise<Response> => {
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    // Get request to find client_id
+    const { data: clientRequest } = await supabase
+      .from("client_requests")
+      .select("client_id")
+      .eq("id", request_id)
+      .single();
+
+    if (!clientRequest) {
+      throw new Error("Client request not found");
+    }
+
     // Get product details for SLA and price
     const { data: clientService } = await supabase
       .from("client_services")
       .select("negotiated_price, sla_days")
       .eq("product_id", product_id)
-      .single();
-
-    // Get project to find client_id
-    const { data: project } = await supabase
-      .from("projects")
-      .select("client_id")
-      .eq("id", project_id)
+      .eq("client_id", clientRequest.client_id)
       .single();
 
     const slaData = clientService || { negotiated_price: 0, sla_days: 7 };
@@ -57,7 +60,8 @@ const handler = async (req: Request): Promise<Response> => {
     const { data: task, error: taskError } = await supabase
       .from("tasks")
       .insert({
-        project_id,
+        request_id,
+        project_id: null,
         product_id,
         assignee_id: assignee_id || null,
         due_date,
@@ -94,14 +98,12 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Log activity
-    if (project?.client_id) {
-      await supabase.from("activity_log").insert({
-        client_id: project.client_id,
-        user_id: assignee_id,
-        action_type: "request",
-        description: `Tarefa criada a partir da solicitação`
-      });
-    }
+    await supabase.from("activity_log").insert({
+      client_id: clientRequest.client_id,
+      user_id: assignee_id,
+      action_type: "request",
+      description: `Tarefa criada a partir da solicitação`
+    });
 
     console.log("Task created successfully:", task);
 

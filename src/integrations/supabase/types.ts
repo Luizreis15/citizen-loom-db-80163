@@ -146,6 +146,7 @@ export type Database = {
           priority: string | null
           product_id: number
           project_id: string | null
+          protocol_number: string | null
           quantity: number | null
           requested_by: string | null
           review_notes: string | null
@@ -163,6 +164,7 @@ export type Database = {
           priority?: string | null
           product_id: number
           project_id?: string | null
+          protocol_number?: string | null
           quantity?: number | null
           requested_by?: string | null
           review_notes?: string | null
@@ -180,6 +182,7 @@ export type Database = {
           priority?: string | null
           product_id?: number
           project_id?: string | null
+          protocol_number?: string | null
           quantity?: number | null
           requested_by?: string | null
           review_notes?: string | null
@@ -623,8 +626,9 @@ export type Database = {
           frozen_sla_days: number
           id: string
           product_id: number
-          project_id: string
+          project_id: string | null
           quantity: number
+          request_id: string | null
           status: string
           updated_at: string
           variant_description: string | null
@@ -637,8 +641,9 @@ export type Database = {
           frozen_sla_days: number
           id?: string
           product_id: number
-          project_id: string
+          project_id?: string | null
           quantity?: number
+          request_id?: string | null
           status?: string
           updated_at?: string
           variant_description?: string | null
@@ -651,8 +656,9 @@ export type Database = {
           frozen_sla_days?: number
           id?: string
           product_id?: number
-          project_id?: string
+          project_id?: string | null
           quantity?: number
+          request_id?: string | null
           status?: string
           updated_at?: string
           variant_description?: string | null
@@ -677,6 +683,13 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "client_requests"
             referencedColumns: ["id"]
           },
         ]
@@ -772,6 +785,7 @@ export type Database = {
       }
     }
     Functions: {
+      generate_protocol_number: { Args: never; Returns: string }
       get_user_roles: {
         Args: { _user_id: string }
         Returns: {

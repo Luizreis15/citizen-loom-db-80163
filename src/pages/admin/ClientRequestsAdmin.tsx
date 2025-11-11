@@ -138,8 +138,8 @@ export default function ClientRequestsAdmin() {
   };
 
   const handleApprove = async () => {
-    if (!selectedRequest || !selectedRequest.project_id || !taskData.due_date) {
-      toast.error("Esta solicitação não tem projeto associado ou falta a data de entrega");
+    if (!selectedRequest || !taskData.assignee_id || !taskData.due_date) {
+      toast.error("Por favor, preencha executor e data de entrega");
       return;
     }
 
@@ -161,9 +161,8 @@ export default function ClientRequestsAdmin() {
       const { error: taskError } = await supabase.functions.invoke("create-task", {
         body: {
           request_id: selectedRequest.id,
-          project_id: selectedRequest.project_id,
           product_id: selectedRequest.product_id,
-          assignee_id: taskData.assignee_id || null,
+          assignee_id: taskData.assignee_id,
           due_date: taskData.due_date,
           quantity: selectedRequest.quantity,
           description: selectedRequest.description
@@ -180,7 +179,8 @@ export default function ClientRequestsAdmin() {
         description: `Solicitação aprovada e tarefa criada`
       });
 
-      toast.success("Solicitação aprovada e tarefa criada!");
+      const protocolNumber = selectedRequest.protocol_number || 'N/A';
+      toast.success(`Solicitação ${protocolNumber} aprovada e tarefa criada!`);
       setSelectedRequest(null);
       setReviewNotes("");
       setTaskData({ assignee_id: "", due_date: "" });
@@ -255,9 +255,13 @@ export default function ClientRequestsAdmin() {
           <Card key={request.id}>
             <CardHeader>
               <div className="flex justify-between items-start">
-                <div className="space-y-1">
+                  <div className="space-y-1">
                   <CardTitle className="text-xl">{request.title}</CardTitle>
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <span className="font-mono text-xs bg-muted px-2 py-1 rounded">
+                      {request.protocol_number || 'N/A'}
+                    </span>
+                    <span>•</span>
                     <span>{request.clients?.name}</span>
                     <span>•</span>
                     <span>{request.products?.name}</span>
@@ -317,18 +321,18 @@ export default function ClientRequestsAdmin() {
                     <DialogHeader>
                       <DialogTitle>Aprovar Solicitação</DialogTitle>
                       <DialogDescription>
-                        Crie uma tarefa a partir desta solicitação
+                        Protocolo: {selectedRequest?.protocol_number || 'N/A'} - Defina o executor e prazo de entrega
                       </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4">
                       <div className="space-y-2">
-                        <Label>Responsável (opcional)</Label>
+                        <Label>Responsável *</Label>
                         <Select
                           value={taskData.assignee_id}
                           onValueChange={(value) => setTaskData({ ...taskData, assignee_id: value })}
                         >
                           <SelectTrigger>
-                            <SelectValue placeholder="Selecione o responsável" />
+                            <SelectValue placeholder="Selecione o executor" />
                           </SelectTrigger>
                           <SelectContent>
                             {collaborators.map(collab => (
@@ -341,7 +345,7 @@ export default function ClientRequestsAdmin() {
                       </div>
 
                       <div className="space-y-2">
-                        <Label>Data de Entrega</Label>
+                        <Label>Data de Entrega *</Label>
                         <Input
                           type="date"
                           value={taskData.due_date}

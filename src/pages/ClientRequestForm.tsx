@@ -18,13 +18,11 @@ export default function ClientRequestForm() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [products, setProducts] = useState<any[]>([]);
-  const [projects, setProjects] = useState<any[]>([]);
   const [clientId, setClientId] = useState<string>("");
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   
   const [formData, setFormData] = useState({
     product_id: "",
-    project_id: "",
     title: "",
     description: "",
     quantity: 1,
@@ -35,12 +33,6 @@ export default function ClientRequestForm() {
     fetchProducts();
     fetchClientId();
   }, [user]);
-
-  useEffect(() => {
-    if (clientId) {
-      fetchProjects();
-    }
-  }, [clientId]);
 
   const fetchClientId = async () => {
     if (!user) return;
@@ -65,23 +57,10 @@ export default function ClientRequestForm() {
     setProducts(data || []);
   };
 
-  const fetchProjects = async () => {
-    if (!clientId) return;
-
-    const { data } = await supabase
-      .from("projects")
-      .select("id, name, status")
-      .eq("client_id", clientId)
-      .eq("status", "Ativo")
-      .order("name");
-
-    setProjects(data || []);
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.product_id || !formData.project_id || !formData.title || !formData.description) {
+    if (!formData.product_id || !formData.title || !formData.description) {
       toast.error("Preencha todos os campos obrigatórios");
       return;
     }
@@ -100,7 +79,6 @@ export default function ClientRequestForm() {
         .insert({
           client_id: clientId,
           product_id: parseInt(formData.product_id),
-          project_id: formData.project_id,
           title: formData.title,
           description: formData.description,
           quantity: formData.quantity,
@@ -144,7 +122,8 @@ export default function ClientRequestForm() {
         body: { request_id: request.id }
       });
 
-      toast.success("Solicitação enviada com sucesso!");
+      const protocolNumber = request.protocol_number || 'N/A';
+      toast.success(`Solicitação enviada! Protocolo: ${protocolNumber}`);
       navigate("/client-portal/requests");
     } catch (error: any) {
       console.error("Error creating request:", error);
@@ -214,36 +193,12 @@ export default function ClientRequestForm() {
                     <SelectItem key={product.id} value={product.id.toString()}>
                       {product.name}
                     </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+                   ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="project">Projeto *</Label>
-              <Select
-                value={formData.project_id}
-                onValueChange={(value) => setFormData({ ...formData, project_id: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o projeto" />
-                </SelectTrigger>
-                <SelectContent>
-                  {projects.map(project => (
-                    <SelectItem key={project.id} value={project.id}>
-                      {project.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {projects.length === 0 && (
-                <p className="text-sm text-muted-foreground">
-                  Você ainda não tem projetos ativos. Entre em contato com o administrador.
-                </p>
-              )}
-            </div>
-
-            <div className="space-y-2">
+              <div className="space-y-2">
               <Label htmlFor="title">Título *</Label>
               <Input
                 id="title"
