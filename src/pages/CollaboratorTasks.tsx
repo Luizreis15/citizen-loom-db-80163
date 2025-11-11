@@ -37,14 +37,20 @@ const CollaboratorTasks = () => {
       const { data: tasksData } = await supabase
         .from("tasks")
         .select("project_id")
-        .eq("assignee_id", user?.id || "");
+        .eq("assignee_id", user?.id || "")
+        .not("project_id", "is", null);
 
       if (!tasksData || tasksData.length === 0) {
         setProjects([]);
         return;
       }
 
-      const projectIds = [...new Set(tasksData.map((t) => t.project_id))];
+      const projectIds = [...new Set(tasksData.map((t) => t.project_id).filter(Boolean))];
+
+      if (projectIds.length === 0) {
+        setProjects([]);
+        return;
+      }
 
       const { data: projectsData, error: projectsError } = await supabase
         .from("projects")
@@ -70,6 +76,13 @@ const CollaboratorTasks = () => {
           projects (
             id,
             name,
+            clients (
+              id,
+              name
+            )
+          ),
+          client_requests (
+            title,
             clients (
               id,
               name

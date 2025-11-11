@@ -14,12 +14,15 @@ interface Task {
   variant_description: string | null;
   status: string;
   due_date: string;
-  projects: {
+  projects?: {
     name: string;
+  } | null;
+  client_requests?: {
+    title: string;
     clients: {
       name: string;
     };
-  };
+  } | null;
   products: {
     name: string;
   };
@@ -50,7 +53,10 @@ const CollaboratorDashboard = () => {
         .select(`
           *,
           projects (
-            name,
+            name
+          ),
+          client_requests (
+            title,
             clients (
               name
             )
@@ -166,11 +172,18 @@ const CollaboratorDashboard = () => {
                         {task.variant_description && ` - ${task.variant_description}`}
                       </p>
                       <p className="text-sm text-muted-foreground">
-                        Cliente: {task.projects.clients.name}
+                        Cliente: {task.client_requests?.clients.name || 'N/A'}
                       </p>
-                      <p className="text-sm text-muted-foreground">
-                        Projeto: {task.projects.name}
-                      </p>
+                      {task.client_requests && (
+                        <p className="text-sm text-muted-foreground">
+                          Solicitação: {task.client_requests.title}
+                        </p>
+                      )}
+                      {task.projects && (
+                        <p className="text-sm text-muted-foreground">
+                          Projeto: {task.projects.name}
+                        </p>
+                      )}
                     </div>
                     <div className="text-right space-y-1">
                       <p
