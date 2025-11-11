@@ -254,7 +254,8 @@ export default function FirstAccess() {
       }
 
       // 3. Create/update profile with client_id
-      const { error: profileError } = await supabase
+      console.log("🔧 Creating/updating profile with client_id:", clientData!.id);
+      const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .upsert({
           id: userId,
@@ -263,16 +264,18 @@ export default function FirstAccess() {
           client_id: clientData!.id,
         }, {
           onConflict: 'id'
-        });
+        })
+        .select();
 
       if (profileError) {
-        console.error('Error creating/updating profile:', profileError);
-        throw new Error('Erro ao criar perfil do cliente');
+        console.error("❌ Error creating/updating profile:", profileError);
+        throw new Error(`Erro ao criar perfil: ${profileError.message}`);
       }
 
-      console.log('Profile created/updated with client_id');
+      console.log("✅ Profile created/updated successfully:", profileData);
 
       // 4. Get "Cliente" role_id
+      console.log("🔍 Fetching Cliente role...");
       const { data: clientRole, error: roleQueryError } = await supabase
         .from('roles')
         .select('id')
@@ -280,28 +283,30 @@ export default function FirstAccess() {
         .single();
 
       if (roleQueryError || !clientRole) {
-        console.error('Error fetching Cliente role:', roleQueryError);
-        throw new Error('Erro ao buscar role de Cliente');
+        console.error("❌ Error fetching Cliente role:", roleQueryError);
+        throw new Error('Role Cliente não encontrada no sistema');
       }
 
-      console.log('Cliente role found:', clientRole.id);
+      console.log("✅ Cliente role found, ID:", clientRole.id);
 
       // 5. Assign "Cliente" role to user
-      const { error: roleError } = await supabase
+      console.log("🔧 Assigning Cliente role to user:", userId);
+      const { data: roleData, error: roleError } = await supabase
         .from('user_roles')
         .upsert({
           user_id: userId,
           role_id: clientRole.id,
         }, {
           onConflict: 'user_id,role_id'
-        });
+        })
+        .select();
 
       if (roleError) {
-        console.error('Error assigning Cliente role:', roleError);
-        throw new Error('Erro ao atribuir role de Cliente');
+        console.error("❌ Error assigning Cliente role:", roleError);
+        throw new Error(`Erro ao atribuir role de Cliente: ${roleError.message}`);
       }
 
-      console.log('Cliente role assigned successfully');
+      console.log("✅ Cliente role assigned successfully:", roleData);
 
       // 6. Mark token as used
       const { error: tokenError } = await supabase

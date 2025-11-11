@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { toast } from "sonner";
 import { z } from "zod";
 
 const loginSchema = z.object({
@@ -27,7 +28,14 @@ const Login = () => {
 
   // Redirecionar após login baseado no role
   useEffect(() => {
-    if (user && !roleLoading && role) {
+    if (user && !roleLoading) {
+      if (!role) {
+        // Usuário logado mas sem role - erro crítico
+        console.error("❌ User logged in without role:", user.id);
+        toast.error("Sua conta não tem permissões configuradas. Entre em contato com o suporte.");
+        return;
+      }
+      
       if (isCollaboratorRole(role)) {
         navigate("/collaborator/dashboard");
       } else if (isClientRole(role)) {
