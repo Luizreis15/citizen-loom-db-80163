@@ -35,6 +35,7 @@ import ClientRequestsAdmin from "./pages/admin/ClientRequestsAdmin";
 import TicketsBoard from "./pages/admin/TicketsBoard";
 import CollaboratorDashboard from "./pages/CollaboratorDashboard";
 import CollaboratorTasks from "./pages/CollaboratorTasks";
+import CollaboratorTaskDetail from "./pages/CollaboratorTaskDetail";
 import NotFound from "./pages/NotFound";
 import { AuthLayout } from "./components/AuthLayout";
 import { ErrorBoundary } from "./components/ErrorBoundary";
@@ -174,7 +175,7 @@ const App = () => {
                 } />
                 <Route path="/collaborator/tasks/:id" element={
                   <ProtectedRoute allowedRoles={["Colaborador", "Editor de Vídeo", "Social Mídia", "Webdesigner", "Administrativo", "Finance"]}>
-                    <ClientPortalTaskDetail />
+                    <CollaboratorTaskDetail />
                   </ProtectedRoute>
                 } />
               </Route>

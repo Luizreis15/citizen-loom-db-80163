@@ -53,6 +53,13 @@ export type Database = {
             referencedRelation: "clients"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "activation_tokens_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "tasks_with_details"
+            referencedColumns: ["client_owner_id"]
+          },
         ]
       }
       activity_log: {
@@ -90,6 +97,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activity_log_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "tasks_with_details"
+            referencedColumns: ["client_owner_id"]
           },
         ]
       }
@@ -134,6 +148,13 @@ export type Database = {
             isOneToOne: true
             referencedRelation: "clients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brand_identities_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "tasks_with_details"
+            referencedColumns: ["client_owner_id"]
           },
         ]
       }
@@ -201,6 +222,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "client_requests_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "tasks_with_details"
+            referencedColumns: ["client_owner_id"]
+          },
+          {
             foreignKeyName: "client_requests_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
@@ -254,6 +282,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_services_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "tasks_with_details"
+            referencedColumns: ["client_owner_id"]
           },
           {
             foreignKeyName: "client_services_product_id_fkey"
@@ -365,6 +400,13 @@ export type Database = {
             referencedRelation: "clients"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "financial_transactions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "tasks_with_details"
+            referencedColumns: ["client_owner_id"]
+          },
         ]
       }
       notifications: {
@@ -475,6 +517,13 @@ export type Database = {
             referencedRelation: "clients"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "profiles_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "tasks_with_details"
+            referencedColumns: ["client_owner_id"]
+          },
         ]
       }
       projects: {
@@ -515,6 +564,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projects_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "tasks_with_details"
+            referencedColumns: ["client_owner_id"]
           },
         ]
       }
@@ -801,13 +857,6 @@ export type Database = {
           variant_description: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "clients_user_id_fkey"
-            columns: ["client_owner_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "tasks_assignee_id_fkey"
             columns: ["assignee_id"]

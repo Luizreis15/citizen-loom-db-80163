@@ -9,8 +9,9 @@ interface FileUploadProps {
   onFilesUploaded: (files: UploadedFile[]) => void;
   maxSize?: number; // in MB
   acceptedTypes?: string[];
-  clientId: string;
+  clientId?: string;
   requestId?: string;
+  uploadType?: 'Entrada' | 'Saída';
 }
 
 export interface UploadedFile {
@@ -26,7 +27,8 @@ export function FileUpload({
   maxSize = 100, 
   acceptedTypes = ['video/*', 'image/*', '.pdf', '.doc', '.docx'],
   clientId,
-  requestId
+  requestId,
+  uploadType = 'Entrada'
 }: FileUploadProps) {
   const [files, setFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
@@ -79,9 +81,9 @@ export function FileUpload({
         const file = files[i];
         const fileExt = file.name.split('.').pop();
         const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-        const filePath = requestId 
+        const filePath = clientId && requestId 
           ? `${clientId}/${requestId}/${fileName}`
-          : `${clientId}/temp/${fileName}`;
+          : `temp/${fileName}`;
 
         // Simulate progress
         const progressInterval = setInterval(() => {
