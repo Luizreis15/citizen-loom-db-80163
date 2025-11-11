@@ -11,6 +11,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { AdminViewingBanner } from "@/components/AdminViewingBanner";
 import { ClientPortalSidebar } from "@/components/ClientPortalSidebar";
 import { CollaboratorSidebar } from "@/components/CollaboratorSidebar";
+import { useTaskNotifications } from "@/hooks/useTaskNotifications";
 
 export function AuthLayout() {
   const { user, loading } = useAuth();
@@ -19,6 +20,9 @@ export function AuthLayout() {
   const location = useLocation();
   const [profileChecked, setProfileChecked] = useState(false);
   const [hasClientId, setHasClientId] = useState(true);
+
+  // Enable real-time notifications for collaborators
+  useTaskNotifications();
 
   useEffect(() => {
     if (!loading && !user) {
