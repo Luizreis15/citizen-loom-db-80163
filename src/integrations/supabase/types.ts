@@ -833,6 +833,7 @@ export type Database = {
       }
     }
     Functions: {
+      cleanup_unconfirmed_users: { Args: never; Returns: undefined }
       generate_protocol_number: { Args: never; Returns: string }
       get_user_roles: {
         Args: { _user_id: string }

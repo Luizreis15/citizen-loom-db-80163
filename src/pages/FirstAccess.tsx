@@ -212,6 +212,37 @@ export default function FirstAccess() {
         if (!userData.user) throw new Error("User creation failed");
 
         userId = userData.user.id;
+      } else if (checkError && checkError.message.includes('Email not confirmed')) {
+        // User exists but email not confirmed - call edge function to delete and retry
+        console.log('User exists with unconfirmed email, attempting to delete...');
+        
+        const { error: deleteError } = await supabase.functions.invoke('delete-unconfirmed-user', {
+          body: { email: clientData!.email }
+        });
+
+        if (deleteError) {
+          console.error('Error deleting unconfirmed user:', deleteError);
+          throw new Error(
+            'Seu email já está cadastrado mas não foi confirmado. Por favor, entre em contato com o suporte.'
+          );
+        }
+
+        // Retry creating user after deletion
+        const { data: userData, error: signUpError } = await supabase.auth.signUp({
+          email: clientData!.email,
+          password: password,
+          options: {
+            emailRedirectTo: `${window.location.origin}/client-portal/tasks`,
+            data: {
+              full_name: clientData!.name,
+            }
+          }
+        });
+
+        if (signUpError) throw signUpError;
+        if (!userData.user) throw new Error("User creation failed after retry");
+
+        userId = userData.user.id;
       } else if (!checkError) {
         // User exists and password is correct
         const { data: { user } } = await supabase.auth.getUser();
