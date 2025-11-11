@@ -33,7 +33,11 @@ interface Task {
   } | null;
   projects: {
     name: string;
-  };
+  } | null;
+  client_requests?: {
+    protocol_number: string;
+    title: string;
+  } | null;
 }
 
 interface Attachment {
@@ -136,7 +140,8 @@ const ClientPortalTaskDetail = () => {
           *,
           products(name, description),
           profiles(full_name),
-          projects(name)
+          projects(name),
+          client_requests(protocol_number, title)
         `)
         .eq("id", id)
         .single();
@@ -359,7 +364,12 @@ const ClientPortalTaskDetail = () => {
             <div className="flex items-center gap-2 text-sm">
               <Package className="h-4 w-4 text-muted-foreground" />
               <span className="font-medium">Projeto:</span>
-              <span>{task.projects.name}</span>
+              <span>
+                {task.projects?.name || 
+                 task.client_requests?.protocol_number || 
+                 task.client_requests?.title || 
+                 'Sem projeto vinculado'}
+              </span>
             </div>
 
             <div className="flex items-center gap-2 text-sm">

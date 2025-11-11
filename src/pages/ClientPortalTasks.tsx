@@ -25,7 +25,11 @@ interface Task {
   } | null;
   projects: {
     name: string;
-  };
+  } | null;
+  client_requests?: {
+    protocol_number: string;
+    title: string;
+  } | null;
 }
 
 // Simplified statuses for client portal
@@ -133,7 +137,8 @@ const ClientPortalTasks = () => {
           *,
           products(name),
           profiles(full_name),
-          projects(name, client_id)
+          projects(name, client_id),
+          client_requests(protocol_number, title, client_id)
         `)
         .order("due_date", { ascending: true });
       
@@ -227,7 +232,9 @@ const ClientPortalTasks = () => {
                           {task.products.name}
                         </CardTitle>
                         <Badge variant="outline" className="shrink-0 text-xs">
-                          {task.projects.name}
+                          {task.projects?.name || 
+                           task.client_requests?.protocol_number || 
+                           'Demanda'}
                         </Badge>
                       </div>
                       {task.variant_description && (
