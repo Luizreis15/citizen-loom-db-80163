@@ -32,6 +32,7 @@ import ClientFinancial from "./pages/ClientFinancial";
 import ClientPackage from "./pages/ClientPackage";
 import ClientProfile from "./pages/ClientProfile";
 import ClientRequestsAdmin from "./pages/admin/ClientRequestsAdmin";
+import TicketsBoard from "./pages/admin/TicketsBoard";
 import CollaboratorDashboard from "./pages/CollaboratorDashboard";
 import CollaboratorTasks from "./pages/CollaboratorTasks";
 import NotFound from "./pages/NotFound";
@@ -102,6 +103,11 @@ const App = () => {
                 <Route path="/admin/requests" element={
                   <ProtectedRoute allowedRoles={["Owner", "Admin"]}>
                     <ClientRequestsAdmin />
+                  </ProtectedRoute>
+                } />
+                <Route path="/admin/tickets" element={
+                  <ProtectedRoute allowedRoles={["Owner", "Admin"]}>
+                    <TicketsBoard />
                   </ProtectedRoute>
                 } />
 

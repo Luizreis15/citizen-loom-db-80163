@@ -1,4 +1,4 @@
-import { Home, Users, FolderKanban, UserCog, Settings, FileText, Inbox } from "lucide-react";
+import { Home, Users, FolderKanban, UserCog, Settings, FileText, Inbox, Ticket } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import {
   Sidebar,
@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 const menuItems = [
   { title: "Dashboard", url: "/dashboard", icon: Home },
   { title: "Solicitações", url: "/admin/requests", icon: Inbox },
+  { title: "Tickets", url: "/admin/tickets", icon: Ticket },
   { title: "Clientes", url: "/clients", icon: Users },
   { title: "Projetos", url: "/projetos", icon: FolderKanban },
   { title: "Usuários", url: "/usuarios", icon: UserCog },
