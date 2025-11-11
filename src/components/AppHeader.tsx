@@ -21,6 +21,7 @@ import {
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { NotificationBell } from "@/components/NotificationBell";
 
 interface AppHeaderProps {
   showSidebarTrigger?: boolean;
@@ -95,6 +96,8 @@ export function AppHeader({ showSidebarTrigger = true, clientSelector = false }:
         )}
         
         <div className="flex-1" />
+
+        <NotificationBell />
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

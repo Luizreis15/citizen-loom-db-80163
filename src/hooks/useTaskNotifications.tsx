@@ -43,6 +43,17 @@ export function useTaskNotifications() {
             const clientName = taskData.client_requests?.clients?.name || 'Cliente';
             const serviceName = taskData.products?.name || 'Serviço';
             const protocol = taskData.client_requests?.protocol_number || '';
+            const notificationMessage = `${protocol} - ${serviceName} para ${clientName}. Prazo: ${new Date(taskData.due_date).toLocaleDateString('pt-BR')}`;
+
+            // Save notification to database
+            await supabase.from('notifications').insert({
+              user_id: user.id,
+              title: 'Nova Tarefa Atribuída',
+              message: notificationMessage,
+              type: 'task_assigned',
+              related_task_id: taskData.id,
+              read: false
+            });
 
             toast({
               title: "🎯 Novo ticket atribuído!",
@@ -99,6 +110,17 @@ export function useTaskNotifications() {
               const clientName = taskData.client_requests?.clients?.name || 'Cliente';
               const serviceName = taskData.products?.name || 'Serviço';
               const protocol = taskData.client_requests?.protocol_number || '';
+              const notificationMessage = `${protocol} - ${serviceName} para ${clientName}. Prazo: ${new Date(taskData.due_date).toLocaleDateString('pt-BR')}`;
+
+              // Save notification to database
+              await supabase.from('notifications').insert({
+                user_id: user.id,
+                title: 'Tarefa Atribuída',
+                message: notificationMessage,
+                type: 'task_reassigned',
+                related_task_id: taskData.id,
+                read: false
+              });
 
               toast({
                 title: "🎯 Ticket atribuído a você!",
