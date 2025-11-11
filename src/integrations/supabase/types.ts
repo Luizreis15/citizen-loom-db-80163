@@ -847,6 +847,7 @@ export type Database = {
         Args: { _role_name: string; _user_id: string }
         Returns: boolean
       }
+      sync_client_profiles: { Args: never; Returns: undefined }
       user_is_assigned_to_project: {
         Args: { _project_id: string; _user_id: string }
         Returns: boolean

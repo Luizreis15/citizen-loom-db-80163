@@ -253,7 +253,57 @@ export default function FirstAccess() {
         throw checkError;
       }
 
-      // 3. Mark token as used
+      // 3. Create/update profile with client_id
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .upsert({
+          id: userId,
+          full_name: clientData!.name,
+          email: clientData!.email,
+          client_id: clientData!.id,
+        }, {
+          onConflict: 'id'
+        });
+
+      if (profileError) {
+        console.error('Error creating/updating profile:', profileError);
+        throw new Error('Erro ao criar perfil do cliente');
+      }
+
+      console.log('Profile created/updated with client_id');
+
+      // 4. Get "Cliente" role_id
+      const { data: clientRole, error: roleQueryError } = await supabase
+        .from('roles')
+        .select('id')
+        .eq('name', 'Cliente')
+        .single();
+
+      if (roleQueryError || !clientRole) {
+        console.error('Error fetching Cliente role:', roleQueryError);
+        throw new Error('Erro ao buscar role de Cliente');
+      }
+
+      console.log('Cliente role found:', clientRole.id);
+
+      // 5. Assign "Cliente" role to user
+      const { error: roleError } = await supabase
+        .from('user_roles')
+        .upsert({
+          user_id: userId,
+          role_id: clientRole.id,
+        }, {
+          onConflict: 'user_id,role_id'
+        });
+
+      if (roleError) {
+        console.error('Error assigning Cliente role:', roleError);
+        throw new Error('Erro ao atribuir role de Cliente');
+      }
+
+      console.log('Cliente role assigned successfully');
+
+      // 6. Mark token as used
       const { error: tokenError } = await supabase
         .from("activation_tokens")
         .update({ used_at: new Date().toISOString() })
@@ -261,7 +311,7 @@ export default function FirstAccess() {
 
       if (tokenError) throw tokenError;
 
-      // 4. Update client record (user is still authenticated)
+      // 7. Update client record (user is still authenticated)
       const { error: clientError } = await supabase
         .from("clients")
         .update({
@@ -273,7 +323,7 @@ export default function FirstAccess() {
 
       if (clientError) throw clientError;
 
-      // 5. Sign out after all updates are complete
+      // 8. Sign out after all updates are complete
       await supabase.auth.signOut();
 
       toast({
