@@ -33,6 +33,7 @@ import ClientPackage from "./pages/ClientPackage";
 import ClientProfile from "./pages/ClientProfile";
 import ClientRequestsAdmin from "./pages/admin/ClientRequestsAdmin";
 import TicketsBoard from "./pages/admin/TicketsBoard";
+import AdminTaskReview from "./pages/admin/AdminTaskReview";
 import CollaboratorDashboard from "./pages/CollaboratorDashboard";
 import CollaboratorTasks from "./pages/CollaboratorTasks";
 import CollaboratorTaskDetail from "./pages/CollaboratorTaskDetail";
@@ -109,6 +110,11 @@ const App = () => {
                 <Route path="/admin/tickets" element={
                   <ProtectedRoute allowedRoles={["Owner", "Admin"]}>
                     <TicketsBoard />
+                  </ProtectedRoute>
+                } />
+                <Route path="/admin/review" element={
+                  <ProtectedRoute allowedRoles={["Owner", "Admin"]}>
+                    <AdminTaskReview />
                   </ProtectedRoute>
                 } />
 
