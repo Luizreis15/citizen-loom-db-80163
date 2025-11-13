@@ -170,7 +170,15 @@ const Dashboard = () => {
                       `R$ ${value.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`
                     }
                   />
-                  <Legend />
+                  <Legend 
+                    formatter={(value: string) => {
+                      const productData = productRevenue.find(p => p.name === value);
+                      const formattedValue = productData 
+                        ? `R$ ${productData.value.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`
+                        : '';
+                      return `${value} - ${formattedValue}`;
+                    }}
+                  />
                 </PieChart>
               </ResponsiveContainer>
             ) : (
