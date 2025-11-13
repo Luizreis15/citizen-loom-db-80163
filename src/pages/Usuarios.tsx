@@ -101,15 +101,25 @@ const Usuarios = () => {
 
       toast.loading("Reenviando convite...");
       
-      // Buscar role_ids do colaborador
-      const { data: userRoles, error: rolesError } = await supabase
-        .from('user_roles')
-        .select('role_id')
-        .eq('user_id', userId);
+      // Buscar role_ids baseado nos nomes das roles que o usuário já tem
+      const roleNames = user?.roles.map(r => r.name) || [];
+      
+      if (roleNames.length === 0) {
+        throw new Error("Usuário não possui roles atribuídas");
+      }
+
+      const { data: rolesData, error: rolesError } = await supabase
+        .from('roles')
+        .select('id')
+        .in('name', roleNames);
 
       if (rolesError) throw rolesError;
 
-      const roleIds = userRoles?.map(ur => ur.role_id) || [];
+      const roleIds = rolesData?.map(r => r.id) || [];
+      
+      if (roleIds.length === 0) {
+        throw new Error("Não foi possível encontrar os IDs das roles");
+      }
 
       // Buscar client_id se houver
       const clientId = user?.client_id || undefined;
