@@ -99,13 +99,37 @@ const Usuarios = () => {
         return;
       }
 
-      toast.info("Reenviando email de boas-vindas...");
+      toast.loading("Reenviando convite...");
       
-      // This would need a separate endpoint or reuse send-welcome-collaborator
-      toast.success("Email reenviado com sucesso!");
+      // Buscar role_ids do colaborador
+      const { data: userRoles, error: rolesError } = await supabase
+        .from('user_roles')
+        .select('role_id')
+        .eq('user_id', userId);
+
+      if (rolesError) throw rolesError;
+
+      const roleIds = userRoles?.map(ur => ur.role_id) || [];
+
+      // Buscar client_id se houver
+      const clientId = user?.client_id || undefined;
+
+      // Chamar edge function para reenviar convite
+      const { error } = await supabase.functions.invoke("send-welcome-collaborator", {
+        body: {
+          full_name: user?.full_name || '',
+          email: email,
+          role_ids: roleIds,
+          client_id: clientId,
+        },
+      });
+
+      if (error) throw error;
+
+      toast.success(`Convite reenviado! ${user?.full_name} receberá um novo email de ativação.`);
     } catch (error: any) {
       console.error("Error resending welcome email:", error);
-      toast.error("Erro ao reenviar email");
+      toast.error(error.message || "Erro ao reenviar email");
     }
   };
 
