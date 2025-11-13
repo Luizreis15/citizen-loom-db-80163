@@ -176,10 +176,30 @@ const handler = async (req: Request): Promise<Response> => {
 
     const roleNames = roles?.map(r => r.name).join(", ") || "Colaborador";
 
-    // Generate activation token
+    // Invalidate old unused activation tokens for this user
+    console.log("Invalidating old activation tokens for user:", userId);
+    const { error: invalidateError } = await supabaseAdmin
+      .from("activation_tokens")
+      .update({ 
+        used_at: new Date().toISOString() // Mark as used to invalidate
+      })
+      .eq("user_id", userId)
+      .eq("user_type", "collaborator")
+      .is("used_at", null);
+
+    if (invalidateError) {
+      console.error("Error invalidating old tokens:", invalidateError);
+      // Don't throw - continue with new token generation
+    } else {
+      console.log("Old tokens invalidated successfully");
+    }
+
+    // Generate new activation token
     const activationToken = crypto.randomUUID();
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7); // 7 days
+
+    console.log("Generating new activation token for user:", userId);
 
     // Insert activation token
     const { error: tokenError } = await supabaseAdmin
@@ -196,6 +216,8 @@ const handler = async (req: Request): Promise<Response> => {
       console.error("Error creating activation token:", tokenError);
       throw new Error("Failed to create activation token");
     }
+
+    console.log("New activation token created successfully");
 
     // Generate activation link
     const appUrl = Deno.env.get("APP_URL") || "https://citizen-loom-db-80163.lovable.app";
