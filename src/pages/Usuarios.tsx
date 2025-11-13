@@ -368,6 +368,7 @@ const Usuarios = () => {
                       <TableHead>Email</TableHead>
                       <TableHead>Função</TableHead>
                       <TableHead>Criado em</TableHead>
+                      <TableHead>Ações</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -391,6 +392,15 @@ const Usuarios = () => {
                         </TableCell>
                         <TableCell>
                           {new Date(user.created_at).toLocaleDateString("pt-BR")}
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleResendWelcome(user.email, user.id)}
+                          >
+                            <Mail className="h-4 w-4" />
+                          </Button>
                         </TableCell>
                       </TableRow>
                     ))}
