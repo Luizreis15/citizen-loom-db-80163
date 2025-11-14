@@ -10,11 +10,11 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Zod validation schema
+// Validation schema
 const welcomeClientSchema = z.object({
-  client_id: z.string().uuid({ message: "client_id deve ser um UUID válido" }),
-  client_name: z.string().min(1, { message: "client_name é obrigatório" }).max(100, { message: "client_name deve ter no máximo 100 caracteres" }),
-  client_email: z.string().email({ message: "client_email deve ser um email válido" }).max(255, { message: "client_email deve ter no máximo 255 caracteres" }),
+  client_id: z.string().uuid(),
+  client_name: z.string().min(1),
+  client_email: z.string().email(),
 });
 
 interface WelcomeClientRequest {
@@ -23,7 +23,10 @@ interface WelcomeClientRequest {
   client_email: string;
 }
 
+const DEFAULT_PASSWORD = "Mudar@123";
+
 const handler = async (req: Request): Promise<Response> => {
+  // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -40,152 +43,246 @@ const handler = async (req: Request): Promise<Response> => {
       }
     );
 
-    // Parse and validate input with zod
-    const requestBody = await req.json();
-    const validationResult = welcomeClientSchema.safeParse(requestBody);
-    
-    if (!validationResult.success) {
-      console.error("Input validation failed:", validationResult.error);
+    // Parse and validate request
+    const body: WelcomeClientRequest = await req.json();
+    const validation = welcomeClientSchema.safeParse(body);
+
+    if (!validation.success) {
+      console.error("Validation error:", validation.error);
       return new Response(
-        JSON.stringify({ 
-          error: "Dados inválidos", 
-          details: validationResult.error.errors 
-        }),
-        {
-          status: 400,
-          headers: { "Content-Type": "application/json", ...corsHeaders },
-        }
+        JSON.stringify({ error: "Invalid request data", details: validation.error }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const { client_id, client_name, client_email } = validationResult.data;
+    const { client_id, client_name, client_email } = validation.data;
 
     console.log("Creating welcome email for client:", { client_id, client_name, client_email });
 
-    // Check if there's an existing unused token for this client
-    const { data: existingToken } = await supabaseAdmin
-      .from("activation_tokens")
-      .select("id")
-      .eq("client_id", client_id)
-      .is("used_at", null)
-      .gt("expires_at", new Date().toISOString())
+    // Check if client exists and get user_id
+    const { data: client, error: clientError } = await supabaseAdmin
+      .from("clients")
+      .select("user_id")
+      .eq("id", client_id)
       .single();
 
-    // If exists, invalidate it
-    if (existingToken) {
-      console.log("Invalidating existing token:", existingToken.id);
-      await supabaseAdmin
-        .from("activation_tokens")
-        .update({ used_at: new Date().toISOString() })
-        .eq("id", existingToken.id);
+    if (clientError || !client) {
+      console.error("Client not found:", clientError);
+      throw new Error("Client not found");
     }
 
-    // Generate new activation token
-    const token = crypto.randomUUID();
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + 7); // 7 days expiration
+    let userId: string;
 
-    console.log("Creating new activation token with expiration:", expiresAt);
+    if (client.user_id) {
+      // User already exists, reset password
+      console.log("User already exists:", client.user_id);
+      userId = client.user_id;
 
-    // Save token to database
-    const { error: tokenError } = await supabaseAdmin
-      .from("activation_tokens")
-      .insert({
-        client_id,
-        token,
-        expires_at: expiresAt.toISOString(),
+      const { error: resetError } = await supabaseAdmin.auth.admin.updateUserById(
+        userId,
+        { password: DEFAULT_PASSWORD }
+      );
+
+      if (resetError) {
+        console.error("Error resetting password:", resetError);
+      }
+
+      // Update profile with flag to require password change
+      const { error: profileError } = await supabaseAdmin
+        .from("profiles")
+        .update({ require_password_change: true })
+        .eq("id", userId);
+
+      if (profileError) {
+        console.error("Error updating profile:", profileError);
+      }
+    } else {
+      // Create new user
+      console.log("Creating new user for client");
+      
+      const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
+        email: client_email,
+        password: DEFAULT_PASSWORD,
+        email_confirm: true,
+        user_metadata: {
+          full_name: client_name,
+        },
       });
 
-    if (tokenError) {
-      console.error("Error creating activation token:", tokenError);
-      throw tokenError;
+      if (createError) {
+        console.error("Error creating user:", createError);
+        throw createError;
+      }
+
+      if (!newUser.user) {
+        throw new Error("Failed to create user");
+      }
+
+      userId = newUser.user.id;
+      console.log("New user created:", userId);
+
+      // Update client with user_id
+      const { error: updateClientError } = await supabaseAdmin
+        .from("clients")
+        .update({ user_id: userId })
+        .eq("id", client_id);
+
+      if (updateClientError) {
+        console.error("Error updating client with user_id:", updateClientError);
+      }
+
+      // Create profile with require_password_change flag
+      const { error: profileError } = await supabaseAdmin
+        .from("profiles")
+        .upsert({
+          id: userId,
+          full_name: client_name,
+          email: client_email,
+          client_id: client_id,
+          require_password_change: true,
+        });
+
+      if (profileError) {
+        console.error("Error creating profile:", profileError);
+      }
+
+      // Assign Cliente role
+      const { data: clientRole } = await supabaseAdmin
+        .from("roles")
+        .select("id")
+        .eq("name", "Cliente")
+        .single();
+
+      if (clientRole) {
+        const { error: roleError } = await supabaseAdmin
+          .from("user_roles")
+          .insert({ user_id: userId, role_id: clientRole.id });
+
+        if (roleError) {
+          console.error("Error assigning Cliente role:", roleError);
+        }
+      }
     }
 
-    // Create activation link using custom domain
-    const appUrl = Deno.env.get("APP_URL") || 'https://app.digitalhera.com.br';
-    const activationLink = `${appUrl}/ativar-conta?token=${token}`;
-    
-    console.log("Generated activation link:", activationLink);
+    // Create login URL
+    const appUrl = Deno.env.get("APP_URL") || "https://app.digitalhera.com.br";
+    const loginUrl = `${appUrl}/login`;
+
+    console.log("Sending welcome email to:", client_email);
 
     // Send welcome email
     const emailResponse = await resend.emails.send({
       from: "Digital Hera <noreply@digitalhera.com.br>",
       to: [client_email],
-      subject: "Bem-vindo(a)! 🎉 Ative sua conta na Digital Hera",
+      subject: "Bem-vindo à Digital Hera! 🎉",
       html: `
         <!DOCTYPE html>
         <html>
           <head>
-            <meta charset="UTF-8">
+            <meta charset="utf-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Bem-vindo à Digital Hera</title>
           </head>
-          <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f5f5f5;">
-            <div style="background: linear-gradient(135deg, #7C3AED 0%, #F59E0B 100%); padding: 40px 30px; text-align: center; border-radius: 12px 12px 0 0;">
-              <h1 style="color: white; margin: 0; font-size: 32px; font-weight: 700;">🎉 Bem-vindo(a)!</h1>
-              <p style="color: rgba(255, 255, 255, 0.95); margin: 10px 0 0 0; font-size: 18px;">Digital Hera</p>
-            </div>
-            
-            <div style="background-color: #ffffff; padding: 40px; border: 1px solid #e0e0e0; border-top: none; border-radius: 0 0 12px 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
-              <p style="font-size: 18px; margin-bottom: 20px; color: #1f2937;">Olá <strong style="color: #7C3AED;">${client_name}</strong>,</p>
-              
-              <p style="font-size: 16px; margin-bottom: 20px; color: #4b5563;">
-                É um prazer enorme tê-lo(a) conosco! Sua conta foi criada com sucesso e você já pode acompanhar todos os seus projetos e entregas através do nosso portal exclusivo.
-              </p>
-              
-              <p style="font-size: 16px; margin-bottom: 30px; color: #4b5563;">
-                Para começar, basta criar sua senha de acesso:
-              </p>
-              
-              <div style="text-align: center; margin: 40px 0;">
-                <a href="${activationLink}" 
-                   style="background: linear-gradient(135deg, #7C3AED 0%, #F59E0B 100%); color: white; padding: 18px 40px; text-decoration: none; border-radius: 10px; font-weight: 700; font-size: 18px; display: inline-block; box-shadow: 0 4px 12px rgba(124, 58, 237, 0.4); transition: transform 0.2s;">
-                  Ativar Minha Conta
-                </a>
-              </div>
-              
-              <div style="background-color: #f9fafb; border-left: 4px solid #7C3AED; padding: 20px; margin: 30px 0; border-radius: 8px;">
-                <p style="margin: 0; font-size: 16px; color: #374151;">
-                  <strong style="color: #7C3AED;">✨ O que você terá acesso:</strong>
-                </p>
-                <ul style="margin: 12px 0 0 0; padding-left: 20px; color: #4b5563; font-size: 15px; line-height: 1.8;">
-                  <li>Acompanhamento de todos os seus projetos em tempo real</li>
-                  <li>Cronograma detalhado com prazos e entregas</li>
-                  <li>Comunicação direta com nossa equipe</li>
-                  <li>Histórico completo de todos os trabalhos realizados</li>
-                </ul>
-              </div>
-              
-              <div style="background-color: #fef3c7; border: 1px solid #fbbf24; padding: 16px; border-radius: 8px; margin: 30px 0;">
-                <p style="margin: 0; font-size: 14px; color: #92400e; text-align: center;">
-                  <strong>⚠️ Importante:</strong> Este link é válido por <strong>7 dias</strong>. Após esse período, será necessário solicitar um novo link de ativação.
-                </p>
-              </div>
-              
-              <hr style="border: none; border-top: 2px solid #e5e7eb; margin: 30px 0;">
-              
-              <p style="font-size: 15px; color: #6b7280; text-align: center; margin: 0;">
-                Qualquer dúvida, estamos à disposição!<br>
-                <strong style="color: #7C3AED;">Equipe Digital Hera</strong>
-              </p>
-            </div>
-            
-            <div style="text-align: center; margin-top: 30px; padding: 20px;">
-              <p style="color: #9ca3af; font-size: 12px; margin: 0;">
-                Este é um email automático, por favor não responda.
-              </p>
-              <p style="color: #d1d5db; font-size: 11px; margin: 10px 0 0 0;">
-                Digital Hera © 2025 - Todos os direitos reservados
-              </p>
-            </div>
+          <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;">
+            <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f5f5f5;" cellpadding="0" cellspacing="0">
+              <tr>
+                <td align="center" style="padding: 40px 20px;">
+                  <table role="presentation" style="max-width: 600px; width: 100%; border-collapse: collapse; background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);" cellpadding="0" cellspacing="0">
+                    
+                    <!-- Header -->
+                    <tr>
+                      <td style="padding: 40px 40px 20px; text-align: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px 12px 0 0;">
+                        <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 700; letter-spacing: -0.5px;">
+                          Bem-vindo à Digital Hera
+                        </h1>
+                      </td>
+                    </tr>
+                    
+                    <!-- Body -->
+                    <tr>
+                      <td style="padding: 40px;">
+                        <p style="margin: 0 0 20px; color: #333333; font-size: 16px; line-height: 1.6;">
+                          Olá, <strong style="color: #667eea;">${client_name}</strong>!
+                        </p>
+                        <p style="margin: 0 0 20px; color: #333333; font-size: 16px; line-height: 1.6;">
+                          É com grande alegria que damos as boas-vindas! Sua conta já está ativa e pronta para uso.
+                        </p>
+                        <p style="margin: 0 0 10px; color: #333333; font-size: 16px; line-height: 1.6;">
+                          Use as credenciais abaixo para fazer login:
+                        </p>
+                        
+                        <!-- Credenciais -->
+                        <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f8f9fa; border-radius: 8px; margin: 20px 0;" cellpadding="20" cellspacing="0">
+                          <tr>
+                            <td>
+                              <p style="margin: 0 0 10px; color: #666666; font-size: 14px;">
+                                <strong>Email:</strong>
+                              </p>
+                              <p style="margin: 0 0 20px; color: #333333; font-size: 16px; font-family: monospace;">
+                                ${client_email}
+                              </p>
+                              <p style="margin: 0 0 10px; color: #666666; font-size: 14px;">
+                                <strong>Senha Temporária:</strong>
+                              </p>
+                              <p style="margin: 0; color: #667eea; font-size: 18px; font-weight: 600; font-family: monospace;">
+                                ${DEFAULT_PASSWORD}
+                              </p>
+                            </td>
+                          </tr>
+                        </table>
+                        
+                        <p style="margin: 0 0 30px; color: #e74c3c; font-size: 16px; font-weight: 600; line-height: 1.6; background-color: #fee; padding: 15px; border-radius: 8px; border-left: 4px solid #e74c3c;">
+                          ⚠️ <strong>IMPORTANTE:</strong> No primeiro login, você será OBRIGADO a criar uma nova senha pessoal por motivos de segurança.
+                        </p>
+                        
+                        <!-- CTA Button -->
+                        <table role="presentation" style="margin: 0 auto;" cellpadding="0" cellspacing="0">
+                          <tr>
+                            <td style="border-radius: 8px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                              <a href="${loginUrl}" 
+                                 style="display: inline-block; padding: 16px 40px; color: #ffffff; text-decoration: none; font-size: 16px; font-weight: 600; letter-spacing: 0.5px;">
+                                Fazer Login Agora
+                              </a>
+                            </td>
+                          </tr>
+                        </table>
+                      </td>
+                    </tr>
+                    
+                    <!-- Footer -->
+                    <tr>
+                      <td style="padding: 30px 40px; background-color: #f8f9fa; border-radius: 0 0 12px 12px; border-top: 1px solid #e9ecef;">
+                        <p style="margin: 0 0 10px; color: #6c757d; font-size: 14px; line-height: 1.6;">
+                          Se você tiver alguma dúvida ou precisar de ajuda, nossa equipe está sempre disponível para te auxiliar.
+                        </p>
+                        <p style="margin: 0; color: #6c757d; font-size: 14px; line-height: 1.6;">
+                          Atenciosamente,<br>
+                          <strong style="color: #667eea;">Equipe Digital Hera</strong>
+                        </p>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
           </body>
         </html>
       `,
     });
 
-    console.log("Email sent successfully:", emailResponse);
+    if (emailResponse.error) {
+      console.error("Error sending email:", emailResponse.error);
+      throw emailResponse.error;
+    }
+
+    console.log("Welcome email sent successfully:", emailResponse.data?.id);
 
     return new Response(
-      JSON.stringify({ success: true, message: "Welcome email sent successfully" }),
+      JSON.stringify({
+        success: true,
+        message: "Welcome email sent successfully",
+        email_id: emailResponse.data?.id,
+      }),
       {
         status: 200,
         headers: { "Content-Type": "application/json", ...corsHeaders },
@@ -194,7 +291,9 @@ const handler = async (req: Request): Promise<Response> => {
   } catch (error: any) {
     console.error("Error in send-welcome-client function:", error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({
+        error: error.message || "Internal server error",
+      }),
       {
         status: 500,
         headers: { "Content-Type": "application/json", ...corsHeaders },

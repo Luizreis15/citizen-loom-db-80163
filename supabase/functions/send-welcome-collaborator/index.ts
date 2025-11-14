@@ -25,7 +25,7 @@ interface WelcomeCollaboratorRequest {
   client_id?: string;
 }
 
-const DEFAULT_PASSWORD = "DigitalHera@2024";
+const DEFAULT_PASSWORD = "Mudar@123";
 
 const handler = async (req: Request): Promise<Response> => {
   // Handle CORS preflight
@@ -257,8 +257,8 @@ const handler = async (req: Request): Promise<Response> => {
                           </tr>
                         </table>
                         
-                        <p style="margin: 0 0 30px; color: #e74c3c; font-size: 14px; line-height: 1.6;">
-                          ⚠️ <strong>Importante:</strong> No primeiro login, você será solicitado a criar uma nova senha pessoal.
+                        <p style="margin: 0 0 30px; color: #e74c3c; font-size: 16px; font-weight: 600; line-height: 1.6; background-color: #fee; padding: 15px; border-radius: 8px; border-left: 4px solid #e74c3c;">
+                          ⚠️ <strong>IMPORTANTE:</strong> No primeiro login, você será OBRIGADO a criar uma nova senha pessoal por motivos de segurança.
                         </p>
                         
                         <!-- CTA Button -->
