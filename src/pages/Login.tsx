@@ -30,10 +30,14 @@ const Login = () => {
   useEffect(() => {
     if (user && !roleLoading) {
       if (!role) {
-        // Usuário logado mas sem role - erro crítico
-        console.error("❌ User logged in without role:", user.id);
-        toast.error("Sua conta não tem permissões configuradas. Entre em contato com o suporte.");
-        return;
+        // Dar um pequeno delay antes de mostrar erro para permitir retry do JWT
+        const timer = setTimeout(() => {
+          if (!role) {
+            console.error("❌ User logged in without role:", user.id);
+            // Não mostrar erro se ainda estiver carregando
+          }
+        }, 2000);
+        return () => clearTimeout(timer);
       }
       
       if (isCollaboratorRole(role)) {
