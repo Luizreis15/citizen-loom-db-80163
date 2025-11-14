@@ -10,6 +10,7 @@ import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import FirstAccess from "./pages/FirstAccess";
 import FirstAccessCollaborator from "./pages/FirstAccessCollaborator";
+import ChangePasswordRequired from "./pages/ChangePasswordRequired";
 import Sobre from "./pages/Sobre";
 import Servicos from "./pages/Servicos";
 import Fundadora from "./pages/Fundadora";
@@ -64,6 +65,7 @@ const App = () => {
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/ativar-conta" element={<FirstAccess />} />
               <Route path="/ativar-colaborador" element={<FirstAccessCollaborator />} />
+              <Route path="/trocar-senha" element={<ChangePasswordRequired />} />
               
               <Route element={<AuthLayout />}>
                 {/* Admin/Owner Routes */}

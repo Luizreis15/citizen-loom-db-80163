@@ -65,6 +65,20 @@ export function useAuth() {
 
       if (error) throw error;
 
+      // Verificar se precisa trocar senha
+      if (data.user) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("require_password_change")
+          .eq("id", data.user.id)
+          .single();
+
+        if (profile?.require_password_change) {
+          window.location.href = "/trocar-senha";
+          return { data, error: null };
+        }
+      }
+
       toast.success("Login realizado com sucesso!");
       return { data, error: null };
     } catch (error: any) {
