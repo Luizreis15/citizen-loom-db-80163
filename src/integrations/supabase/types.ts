@@ -489,6 +489,7 @@ export type Database = {
           email: string
           full_name: string
           id: string
+          require_password_change: boolean | null
           updated_at: string
         }
         Insert: {
@@ -498,6 +499,7 @@ export type Database = {
           email: string
           full_name: string
           id: string
+          require_password_change?: boolean | null
           updated_at?: string
         }
         Update: {
@@ -507,6 +509,7 @@ export type Database = {
           email?: string
           full_name?: string
           id?: string
+          require_password_change?: boolean | null
           updated_at?: string
         }
         Relationships: [

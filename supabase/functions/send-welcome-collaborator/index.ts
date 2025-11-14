@@ -25,6 +25,8 @@ interface WelcomeCollaboratorRequest {
   client_id?: string;
 }
 
+const DEFAULT_PASSWORD = "DigitalHera@2024";
+
 const handler = async (req: Request): Promise<Response> => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
@@ -105,127 +107,96 @@ const handler = async (req: Request): Promise<Response> => {
       console.log("User already exists:", existingUser.id);
       userId = existingUser.id;
 
-      // Update profile with client_id if provided
-      if (client_id) {
-        const { error: profileError } = await supabaseAdmin
-          .from("profiles")
-          .update({ client_id })
-          .eq("id", userId);
+      // Reset password to default
+      const { error: resetError } = await supabaseAdmin.auth.admin.updateUserById(
+        userId,
+        { password: DEFAULT_PASSWORD }
+      );
 
-        if (profileError) {
-          console.error("Error updating profile:", profileError);
-        }
+      if (resetError) {
+        console.error("Error resetting password:", resetError);
+      }
+
+      // Update profile with flag to require password change
+      const { error: profileError } = await supabaseAdmin
+        .from("profiles")
+        .update({ 
+          client_id: client_id || null,
+          require_password_change: true,
+          full_name
+        })
+        .eq("id", userId);
+
+      if (profileError) {
+        console.error("Error updating profile:", profileError);
       }
     } else {
-      // Create new user
+      // Create new user with default password
       const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
         email,
-        email_confirm: true,
-        user_metadata: {
-          full_name,
-        },
+        password: DEFAULT_PASSWORD,
+        email_confirm: true, // Auto-confirm email
       });
 
-      if (createError || !newUser?.user) {
+      if (createError || !newUser.user) {
         console.error("Error creating user:", createError);
         throw new Error("Failed to create user");
       }
 
-      console.log("User created:", newUser.user.id);
       userId = newUser.user.id;
+      console.log("New user created:", userId);
 
-      // Update profile with client_id if provided
-      if (client_id) {
-        const { error: profileError } = await supabaseAdmin
-          .from("profiles")
-          .update({ client_id })
-          .eq("id", userId);
+      // Create profile with flag to require password change
+      const { error: profileError } = await supabaseAdmin
+        .from("profiles")
+        .insert({
+          id: userId,
+          full_name,
+          email,
+          client_id: client_id || null,
+          require_password_change: true,
+        });
 
-        if (profileError) {
-          console.error("Error updating profile:", profileError);
-        }
+      if (profileError) {
+        console.error("Error creating profile:", profileError);
+        throw new Error("Failed to create profile");
       }
     }
 
-    // Assign roles to user
-    for (const roleId of role_ids) {
-      const { error: roleError } = await supabaseAdmin
-        .from("user_roles")
-        .upsert(
-          {
-            user_id: userId,
-            role_id: roleId,
-          },
-          {
-            onConflict: 'user_id,role_id',
-            ignoreDuplicates: false
-          }
-        );
+    // Assign roles
+    console.log("Assigning roles:", role_ids);
+    
+    // First, remove any existing roles for this user
+    const { error: deleteError } = await supabaseAdmin
+      .from("user_roles")
+      .delete()
+      .eq("user_id", userId);
 
-      if (roleError) {
-        console.error("Error assigning role:", roleError);
-        throw new Error(`Failed to assign role ${roleId}`);
-      }
+    if (deleteError) {
+      console.error("Error deleting existing roles:", deleteError);
     }
 
-    // Get role names for email
-    const { data: roles } = await supabaseAdmin
-      .from("roles")
-      .select("name")
-      .in("id", role_ids);
+    // Then assign new roles
+    const roleAssignments = role_ids.map(role_id => ({
+      user_id: userId,
+      role_id,
+    }));
 
-    const roleNames = roles?.map(r => r.name).join(", ") || "Colaborador";
+    const { error: rolesInsertError } = await supabaseAdmin
+      .from("user_roles")
+      .insert(roleAssignments);
 
-    // Invalidate old unused activation tokens for this user
-    console.log("Invalidating old activation tokens for user:", userId);
-    const { error: invalidateError } = await supabaseAdmin
-      .from("activation_tokens")
-      .update({ 
-        used_at: new Date().toISOString() // Mark as used to invalidate
-      })
-      .eq("user_id", userId)
-      .eq("user_type", "collaborator")
-      .is("used_at", null);
-
-    if (invalidateError) {
-      console.error("Error invalidating old tokens:", invalidateError);
-      // Don't throw - continue with new token generation
-    } else {
-      console.log("Old tokens invalidated successfully");
+    if (rolesInsertError) {
+      console.error("Error assigning roles:", rolesInsertError);
+      throw new Error("Failed to assign roles");
     }
 
-    // Generate new activation token
-    const activationToken = crypto.randomUUID();
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + 7); // 7 days
+    console.log("Roles assigned successfully");
 
-    console.log("Generating new activation token for user:", userId);
-
-    // Insert activation token
-    const { error: tokenError } = await supabaseAdmin
-      .from("activation_tokens")
-      .insert({
-        user_id: userId,
-        client_id: client_id || null,
-        token: activationToken,
-        expires_at: expiresAt.toISOString(),
-        user_type: 'collaborator',
-      });
-
-    if (tokenError) {
-      console.error("Error creating activation token:", tokenError);
-      throw new Error("Failed to create activation token");
-    }
-
-    console.log("New activation token created successfully");
-
-    // Generate activation link
-    const appUrl = (Deno.env.get("APP_URL") || "https://citizen-loom-db-80163.lovable.app").replace(/\/$/, '');
-    const activationLink = `${appUrl}/ativar-colaborador?token=${activationToken}`;
-
-    console.log("Activation link generated:", activationLink);
-
-    // Send welcome email
+    // Send welcome email with credentials
+    const appUrl = (Deno.env.get("APP_URL") || "https://digitalhera.com.br").replace(/\/$/, '');
+    const loginUrl = `${appUrl}/login`;
+    
     const emailResponse = await resend.emails.send({
       from: "Digital Hera <noreply@digitalhera.com.br>",
       to: [email],
@@ -259,59 +230,63 @@ const handler = async (req: Request): Promise<Response> => {
                         <p style="margin: 0 0 20px; color: #333333; font-size: 16px; line-height: 1.6;">
                           Olá, <strong style="color: #667eea;">${full_name}</strong>!
                         </p>
-                        
                         <p style="margin: 0 0 20px; color: #333333; font-size: 16px; line-height: 1.6;">
-                          Você foi convidado(a) para fazer parte da equipe Digital Hera como <strong>${roleNames}</strong>! 🎉
+                          É com grande alegria que damos as boas-vindas à equipe da Digital Hera! Estamos animados por ter você conosco.
+                        </p>
+                        <p style="margin: 0 0 10px; color: #333333; font-size: 16px; line-height: 1.6;">
+                          Sua conta já está ativa! Use as credenciais abaixo para fazer login:
                         </p>
                         
-                        <p style="margin: 0 0 30px; color: #666666; font-size: 16px; line-height: 1.6;">
-                          Para começar, você precisa ativar sua conta e criar uma senha de acesso:
+                        <!-- Credenciais -->
+                        <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f8f9fa; border-radius: 8px; margin: 20px 0;" cellpadding="20" cellspacing="0">
+                          <tr>
+                            <td>
+                              <p style="margin: 0 0 10px; color: #666666; font-size: 14px;">
+                                <strong>Email:</strong>
+                              </p>
+                              <p style="margin: 0 0 20px; color: #333333; font-size: 16px; font-family: monospace;">
+                                ${email}
+                              </p>
+                              <p style="margin: 0 0 10px; color: #666666; font-size: 14px;">
+                                <strong>Senha Temporária:</strong>
+                              </p>
+                              <p style="margin: 0; color: #667eea; font-size: 18px; font-weight: 600; font-family: monospace;">
+                                ${DEFAULT_PASSWORD}
+                              </p>
+                            </td>
+                          </tr>
+                        </table>
+                        
+                        <p style="margin: 0 0 30px; color: #e74c3c; font-size: 14px; line-height: 1.6;">
+                          ⚠️ <strong>Importante:</strong> No primeiro login, você será solicitado a criar uma nova senha pessoal.
                         </p>
                         
                         <!-- CTA Button -->
-                        <table role="presentation" style="width: 100%; border-collapse: collapse;" cellpadding="0" cellspacing="0">
+                        <table role="presentation" style="margin: 0 auto;" cellpadding="0" cellspacing="0">
                           <tr>
-                            <td align="center" style="padding: 0 0 30px;">
-                              <a href="${activationLink}" 
-                                 style="display: inline-block; padding: 16px 40px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 6px rgba(102, 126, 234, 0.3);">
-                                Ativar Minha Conta
+                            <td style="border-radius: 8px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                              <a href="${loginUrl}" 
+                                 style="display: inline-block; padding: 16px 40px; color: #ffffff; text-decoration: none; font-size: 16px; font-weight: 600; letter-spacing: 0.5px;">
+                                Fazer Login Agora
                               </a>
                             </td>
                           </tr>
                         </table>
                         
-                        <div style="background-color: #f8f9fa; border-left: 4px solid #667eea; padding: 16px; border-radius: 4px; margin-bottom: 30px;">
-                          <p style="margin: 0 0 10px; color: #333333; font-size: 14px; font-weight: 600;">
-                            ⚠️ Importante:
-                          </p>
-                          <p style="margin: 0; color: #666666; font-size: 14px; line-height: 1.5;">
-                            Este link é válido por <strong>7 dias</strong>. Após esse período, será necessário solicitar um novo convite.
-                          </p>
-                        </div>
-                        
-                        <p style="margin: 0 0 10px; color: #666666; font-size: 14px; line-height: 1.6;">
-                          Se o botão não funcionar, copie e cole este link no seu navegador:
-                        </p>
-                        
-                        <p style="margin: 0 0 30px; padding: 12px; background-color: #f8f9fa; border-radius: 4px; word-break: break-all; font-size: 12px; color: #667eea;">
-                          ${activationLink}
-                        </p>
-                        
-                        <p style="margin: 0; color: #666666; font-size: 14px; line-height: 1.6;">
-                          Se você não solicitou este convite ou acredita que recebeu este email por engano, por favor ignore esta mensagem.
+                        <p style="margin: 30px 0 0; color: #999999; font-size: 14px; line-height: 1.6;">
+                          Se você tiver alguma dúvida ou precisar de ajuda, não hesite em entrar em contato conosco.
                         </p>
                       </td>
                     </tr>
                     
                     <!-- Footer -->
                     <tr>
-                      <td style="padding: 30px 40px; text-align: center; background-color: #f8f9fa; border-radius: 0 0 12px 12px; border-top: 1px solid #e9ecef;">
+                      <td style="padding: 30px; text-align: center; border-top: 1px solid #eeeeee;">
                         <p style="margin: 0 0 10px; color: #999999; font-size: 14px;">
-                          Atenciosamente,<br>
-                          <strong style="color: #667eea;">Equipe Digital Hera</strong>
+                          Digital Hera - Marketing Digital
                         </p>
-                        <p style="margin: 0; color: #999999; font-size: 12px;">
-                          © ${new Date().getFullYear()} Digital Hera. Todos os direitos reservados.
+                        <p style="margin: 0; color: #cccccc; font-size: 12px;">
+                          Este é um e-mail automático, por favor não responda.
                         </p>
                       </td>
                     </tr>
@@ -327,21 +302,20 @@ const handler = async (req: Request): Promise<Response> => {
     console.log("Email sent:", emailResponse);
 
     return new Response(
-      JSON.stringify({
-        success: true,
-        userId,
-        message: "Collaborator created and welcome email sent successfully",
+      JSON.stringify({ 
+        success: true, 
+        message: "Collaborator created and welcome email sent",
+        userId 
       }),
       {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       }
     );
-
   } catch (error: any) {
     console.error("Error in send-welcome-collaborator:", error);
     return new Response(
-      JSON.stringify({ error: error.message || "Internal server error" }),
+      JSON.stringify({ error: error.message }),
       {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
