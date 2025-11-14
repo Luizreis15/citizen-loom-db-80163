@@ -220,7 +220,7 @@ const handler = async (req: Request): Promise<Response> => {
     console.log("New activation token created successfully");
 
     // Generate activation link
-    const appUrl = Deno.env.get("APP_URL") || "https://citizen-loom-db-80163.lovable.app";
+    const appUrl = (Deno.env.get("APP_URL") || "https://citizen-loom-db-80163.lovable.app").replace(/\/$/, '');
     const activationLink = `${appUrl}/ativar-colaborador?token=${activationToken}`;
 
     console.log("Activation link generated:", activationLink);

@@ -99,12 +99,13 @@ const Usuarios = () => {
         return;
       }
 
-      toast.loading("Reenviando convite...");
+      const loadingToast = toast.loading("Reenviando convite...");
       
       // Buscar role_ids baseado nos nomes das roles que o usuário já tem
       const roleNames = user?.roles.map(r => r.name) || [];
       
       if (roleNames.length === 0) {
+        toast.dismiss(loadingToast);
         throw new Error("Usuário não possui roles atribuídas");
       }
 
@@ -113,11 +114,15 @@ const Usuarios = () => {
         .select('id')
         .in('name', roleNames);
 
-      if (rolesError) throw rolesError;
+      if (rolesError) {
+        toast.dismiss(loadingToast);
+        throw rolesError;
+      }
 
       const roleIds = rolesData?.map(r => r.id) || [];
       
       if (roleIds.length === 0) {
+        toast.dismiss(loadingToast);
         throw new Error("Não foi possível encontrar os IDs das roles");
       }
 
@@ -134,6 +139,8 @@ const Usuarios = () => {
         },
       });
 
+      toast.dismiss(loadingToast);
+      
       if (error) throw error;
 
       toast.success(`Convite reenviado! ${user?.full_name} receberá um novo email de ativação.`);
