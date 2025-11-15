@@ -1,13 +1,16 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { useUserRole } from "@/hooks/useUserRole";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
-import { User, Mail, Lock } from "lucide-react";
+import { User, Mail, Lock, TestTube, RefreshCw } from "lucide-react";
+import { getRoles, getUserRoles, addTestRole, removeTestRole, removeAllRolesExcept } from "@/lib/testRoleSwitch";
+import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -19,6 +22,7 @@ import {
 
 const Configuracoes = () => {
   const { user } = useAuth();
+  const { role } = useUserRole();
   const [loading, setLoading] = useState(false);
   const [profile, setProfile] = useState<any>(null);
   const [formData, setFormData] = useState({
@@ -29,12 +33,20 @@ const Configuracoes = () => {
     newPassword: "",
     confirmPassword: ""
   });
+  
+  // Estados para teste de roles
+  const [availableRoles, setAvailableRoles] = useState<any[]>([]);
+  const [currentRoles, setCurrentRoles] = useState<any[]>([]);
+  const [testLoading, setTestLoading] = useState(false);
 
   useEffect(() => {
     if (user) {
       fetchProfile();
+      if (role === "Owner") {
+        fetchRolesData();
+      }
     }
-  }, [user]);
+  }, [user, role]);
 
   const fetchProfile = async () => {
     try {
@@ -107,6 +119,64 @@ const Configuracoes = () => {
       .join("")
       .toUpperCase()
       .slice(0, 2);
+  };
+
+  const fetchRolesData = async () => {
+    try {
+      const [roles, userRoles] = await Promise.all([
+        getRoles(),
+        getUserRoles(user!.id)
+      ]);
+      setAvailableRoles(roles);
+      setCurrentRoles(userRoles);
+    } catch (error: any) {
+      console.error("Error fetching roles:", error);
+    }
+  };
+
+  const handleAddRole = async (roleId: number) => {
+    setTestLoading(true);
+    try {
+      await addTestRole(user!.id, roleId);
+      toast.success("Role adicionada! Recarregando...");
+      setTimeout(() => window.location.reload(), 1000);
+    } catch (error: any) {
+      toast.error(error.message || "Erro ao adicionar role");
+    } finally {
+      setTestLoading(false);
+    }
+  };
+
+  const handleRemoveRole = async (roleId: number) => {
+    setTestLoading(true);
+    try {
+      await removeTestRole(user!.id, roleId);
+      toast.success("Role removida! Recarregando...");
+      setTimeout(() => window.location.reload(), 1000);
+    } catch (error: any) {
+      toast.error("Erro ao remover role");
+    } finally {
+      setTestLoading(false);
+    }
+  };
+
+  const handleResetToOwner = async () => {
+    setTestLoading(true);
+    try {
+      // Encontrar ID da role Owner
+      const ownerRole = availableRoles.find(r => r.name === "Owner");
+      if (!ownerRole) {
+        throw new Error("Role Owner não encontrada");
+      }
+      
+      await removeAllRolesExcept(user!.id, [ownerRole.id]);
+      toast.success("Resetado para Owner! Recarregando...");
+      setTimeout(() => window.location.reload(), 1000);
+    } catch (error: any) {
+      toast.error("Erro ao resetar roles");
+    } finally {
+      setTestLoading(false);
+    }
   };
 
   return (
@@ -210,6 +280,86 @@ const Configuracoes = () => {
           </Dialog>
         </CardContent>
       </Card>
+
+      {role === "Owner" && (
+        <Card className="border-dashed border-2 border-muted-foreground/20">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <TestTube className="h-5 w-5 text-muted-foreground" />
+              <CardTitle>🧪 Teste de Roles (Desenvolvimento)</CardTitle>
+            </div>
+            <CardDescription>
+              Adicione roles temporariamente para testar diferentes visões do sistema
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label className="text-sm font-medium mb-2 block">Roles Ativas</Label>
+              <div className="flex flex-wrap gap-2 mb-4">
+                {currentRoles.length > 0 ? (
+                  currentRoles.map((r) => (
+                    <Badge key={r.role_id} variant="secondary" className="gap-2">
+                      {r.role_name}
+                      {r.role_name !== "Owner" && (
+                        <button
+                          onClick={() => handleRemoveRole(r.role_id)}
+                          disabled={testLoading}
+                          className="ml-1 hover:text-destructive"
+                        >
+                          ×
+                        </button>
+                      )}
+                    </Badge>
+                  ))
+                ) : (
+                  <p className="text-sm text-muted-foreground">Nenhuma role ativa</p>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <Label className="text-sm font-medium mb-2 block">Adicionar Role para Teste</Label>
+              <div className="flex flex-wrap gap-2">
+                {availableRoles
+                  .filter(r => !currentRoles.find(cr => cr.role_id === r.id))
+                  .map((role) => (
+                    <Button
+                      key={role.id}
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleAddRole(role.id)}
+                      disabled={testLoading}
+                    >
+                      + {role.name}
+                    </Button>
+                  ))}
+              </div>
+            </div>
+
+            <div className="pt-4 border-t">
+              <Button
+                variant="destructive"
+                onClick={handleResetToOwner}
+                disabled={testLoading}
+                className="w-full"
+              >
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Resetar para Owner Apenas
+              </Button>
+            </div>
+
+            <div className="text-xs text-muted-foreground bg-muted p-3 rounded-md">
+              <strong>Como usar:</strong>
+              <ul className="list-disc list-inside mt-1 space-y-1">
+                <li>Clique em "+ Nome da Role" para adicionar</li>
+                <li>A página será recarregada automaticamente</li>
+                <li>Você verá a interface daquela role</li>
+                <li>Use "Resetar" para voltar apenas para Owner</li>
+              </ul>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };
