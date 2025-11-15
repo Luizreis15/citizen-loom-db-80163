@@ -144,12 +144,21 @@ export default function ClientRequestsAdmin() {
     }
 
     try {
+      // Get user ID once at the beginning to avoid multiple auth calls
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError || !user) {
+        throw new Error("Erro ao obter dados do usuário. Faça login novamente.");
+      }
+
+      const userId = user.id;
+
       // Update request status
       const { error: updateError } = await supabase
         .from("client_requests")
         .update({
           status: "Aprovado",
-          reviewed_by: (await supabase.auth.getUser()).data.user?.id,
+          reviewed_by: userId,
           reviewed_at: new Date().toISOString(),
           review_notes: reviewNotes
         })
@@ -158,7 +167,7 @@ export default function ClientRequestsAdmin() {
       if (updateError) throw updateError;
 
       // Create task using edge function
-      const { error: taskError } = await supabase.functions.invoke("create-task", {
+      const { data: taskResponse, error: taskError } = await supabase.functions.invoke("create-task", {
         body: {
           request_id: selectedRequest.id,
           product_id: selectedRequest.product_id,
@@ -169,15 +178,23 @@ export default function ClientRequestsAdmin() {
         }
       });
 
-      if (taskError) throw taskError;
+      if (taskError) {
+        console.error("Edge function error:", taskError);
+        throw new Error("Erro ao criar tarefa: " + taskError.message);
+      }
 
       // Log activity
-      await supabase.from("activity_log").insert({
+      const { error: logError } = await supabase.from("activity_log").insert({
         client_id: selectedRequest.client_id,
-        user_id: (await supabase.auth.getUser()).data.user?.id,
+        user_id: userId,
         action_type: "approval",
         description: `Solicitação aprovada e tarefa criada`
       });
+
+      if (logError) {
+        console.error("Error logging activity:", logError);
+        // Don't throw - activity log is not critical
+      }
 
       const protocolNumber = selectedRequest.protocol_number || 'N/A';
       toast.success(`Solicitação ${protocolNumber} aprovada e tarefa criada!`);
@@ -198,11 +215,20 @@ export default function ClientRequestsAdmin() {
     }
 
     try {
+      // Get user ID once at the beginning to avoid multiple auth calls
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError || !user) {
+        throw new Error("Erro ao obter dados do usuário. Faça login novamente.");
+      }
+
+      const userId = user.id;
+
       const { error } = await supabase
         .from("client_requests")
         .update({
           status: "Recusado",
-          reviewed_by: (await supabase.auth.getUser()).data.user?.id,
+          reviewed_by: userId,
           reviewed_at: new Date().toISOString(),
           review_notes: reviewNotes
         })
@@ -210,12 +236,17 @@ export default function ClientRequestsAdmin() {
 
       if (error) throw error;
 
-      await supabase.from("activity_log").insert({
+      const { error: logError } = await supabase.from("activity_log").insert({
         client_id: selectedRequest.client_id,
-        user_id: (await supabase.auth.getUser()).data.user?.id,
+        user_id: userId,
         action_type: "status_change",
         description: `Solicitação recusada`
       });
+
+      if (logError) {
+        console.error("Error logging activity:", logError);
+        // Don't throw - activity log is not critical
+      }
 
       toast.success("Solicitação recusada");
       setSelectedRequest(null);
