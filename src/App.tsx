@@ -38,6 +38,7 @@ import AdminTaskReview from "./pages/admin/AdminTaskReview";
 import CollaboratorDashboard from "./pages/CollaboratorDashboard";
 import CollaboratorTasks from "./pages/CollaboratorTasks";
 import CollaboratorTaskDetail from "./pages/CollaboratorTaskDetail";
+import CollaboratorProfile from "./pages/CollaboratorProfile";
 import NotFound from "./pages/NotFound";
 import { AuthLayout } from "./components/AuthLayout";
 import { ErrorBoundary } from "./components/ErrorBoundary";
@@ -184,6 +185,11 @@ const App = () => {
                 <Route path="/collaborator/tasks/:id" element={
                   <ProtectedRoute allowedRoles={["Colaborador", "Editor de Vídeo", "Social Mídia", "Webdesigner", "Administrativo", "Finance"]}>
                     <CollaboratorTaskDetail />
+                  </ProtectedRoute>
+                } />
+                <Route path="/collaborator/profile" element={
+                  <ProtectedRoute allowedRoles={["Colaborador", "Editor de Vídeo", "Social Mídia", "Webdesigner", "Administrativo", "Finance"]}>
+                    <CollaboratorProfile />
                   </ProtectedRoute>
                 } />
               </Route>

@@ -22,7 +22,7 @@ export function CollaboratorSidebar() {
     },
     {
       title: "Meu Perfil",
-      url: "/configuracoes",
+      url: "/collaborator/profile",
       icon: User,
     },
   ];
