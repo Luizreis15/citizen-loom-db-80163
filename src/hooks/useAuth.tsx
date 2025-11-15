@@ -93,12 +93,20 @@ export function useAuth() {
   const signOut = async () => {
     try {
       const { error } = await supabase.auth.signOut();
-      if (error) throw error;
+      
+      // Mesmo que dê erro "session not found", considerar sucesso
+      // pois o objetivo é deslogar
+      if (error && error.message !== "Session from session_id claim in JWT does not exist") {
+        throw error;
+      }
       
       toast.success("Logout realizado com sucesso!");
-      window.location.href = "/login";
     } catch (error: any) {
-      toast.error("Erro ao fazer logout");
+      console.error("Logout error:", error);
+      toast.error("Erro ao fazer logout, mas redirecionando...");
+    } finally {
+      // SEMPRE redirecionar, mesmo que dê erro
+      window.location.href = "/login";
     }
   };
 
