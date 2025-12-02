@@ -3,7 +3,19 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Eye, EyeOff, Upload, X } from "lucide-react";
+
+interface FieldOption {
+  value: string;
+  label: string;
+}
 
 interface OnboardingFormFieldProps {
   field: {
@@ -13,6 +25,7 @@ interface OnboardingFormFieldProps {
     required?: boolean;
     placeholder?: string;
     sensitive?: boolean;
+    options?: FieldOption[];
   };
   value: string;
   onChange: (key: string, value: string) => void;
@@ -135,6 +148,26 @@ export function OnboardingFormField({
             placeholder={field.placeholder || "(00) 00000-0000"}
             disabled={disabled}
           />
+        );
+
+      case "select":
+        return (
+          <Select
+            value={value}
+            onValueChange={(val) => onChange(field.key, val)}
+            disabled={disabled}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder={field.placeholder || "Selecione..."} />
+            </SelectTrigger>
+            <SelectContent>
+              {field.options?.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         );
 
       default:

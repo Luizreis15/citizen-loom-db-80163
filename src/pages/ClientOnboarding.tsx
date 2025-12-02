@@ -18,6 +18,8 @@ interface FieldSchema {
   required?: boolean;
   placeholder?: string;
   sensitive?: boolean;
+  options?: { value: string; label: string }[];
+  showWhen?: { field: string; equals: string };
 }
 
 interface SectionSchema {
@@ -374,16 +376,26 @@ export default function ClientOnboarding() {
           )}
         </CardHeader>
         <CardContent className="space-y-6">
-          {currentSection.fields.map((field) => (
-            <OnboardingFormField
-              key={field.key}
-              field={field}
-              value={formData[field.key] || ""}
-              onChange={handleFieldChange}
-              onFileUpload={handleFileUpload}
-              fileInfo={files[field.key]}
-            />
-          ))}
+          {currentSection.fields.map((field) => {
+            // Check conditional visibility
+            if (field.showWhen) {
+              const dependentValue = formData[field.showWhen.field];
+              if (dependentValue !== field.showWhen.equals) {
+                return null;
+              }
+            }
+            
+            return (
+              <OnboardingFormField
+                key={field.key}
+                field={field}
+                value={formData[field.key] || ""}
+                onChange={handleFieldChange}
+                onFileUpload={handleFileUpload}
+                fileInfo={files[field.key]}
+              />
+            );
+          })}
 
           <div className="flex justify-between pt-6">
             <Button
