@@ -29,3 +29,24 @@ cron = "0 9 * * *"
 
 [functions.send-password-reset]
 verify_jwt = false
+
+[functions.admin-task-action]
+verify_jwt = true
+
+[functions.collaborator-task-action]
+verify_jwt = true
+
+[functions.delete-unconfirmed-user]
+verify_jwt = false
+
+[functions.send-request-notification]
+verify_jwt = true
+
+[functions.send-request-status-update]
+verify_jwt = true
+
+[functions.onboarding-encrypt-sensitive]
+verify_jwt = true
+
+[functions.onboarding-decrypt-sensitive]
+verify_jwt = true
