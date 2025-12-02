@@ -5,7 +5,8 @@ import {
   DollarSign, 
   Package, 
   User,
-  LogOut
+  LogOut,
+  ClipboardList
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/hooks/useAuth";
@@ -24,6 +25,7 @@ export function ClientPortalSidebar() {
 
   const menuItems = [
     { to: "/client-portal/dashboard", icon: LayoutDashboard, label: "Dashboard" },
+    { to: "/client-portal/onboarding", icon: ClipboardList, label: "Onboarding" },
     { to: "/client-portal/request", icon: FileText, label: "Solicitar Trabalho" },
     { to: "/client-portal/requests", icon: Inbox, label: "Meus Pedidos" },
     { to: "/client-portal/financial", icon: DollarSign, label: "Financeiro" },
