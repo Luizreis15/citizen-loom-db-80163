@@ -21,14 +21,15 @@ interface FieldSchema {
 }
 
 interface SectionSchema {
-  key: string;
+  id: string;
+  step: number;
   title: string;
   description?: string;
   fields: FieldSchema[];
 }
 
 interface TemplateSchema {
-  steps: SectionSchema[];
+  sections: SectionSchema[];
 }
 
 export default function ClientOnboarding() {
@@ -140,8 +141,8 @@ export default function ClientOnboarding() {
     const responseMap = new Map(responses.map((r) => [r.field_key, r.value]));
     const attachmentMap = new Map(attachments.map((a) => [a.field_key, true]));
 
-    schemaData.steps.forEach((step, index) => {
-      const requiredFields = step.fields.filter((f) => f.required);
+    schemaData.sections.forEach((section, index) => {
+      const requiredFields = section.fields.filter((f) => f.required);
       const allFilled = requiredFields.every((f) => {
         if (f.type === "file") {
           return attachmentMap.has(f.key);
@@ -198,7 +199,7 @@ export default function ClientOnboarding() {
       await supabase.from("onboarding_attachments").upsert({
         onboarding_instance_id: instance.id,
         field_key: key,
-        section: schema!.steps[currentStep].key,
+        section: schema!.sections[currentStep].id,
         file_name: file.name,
         file_url: fileName,
         file_type: file.type,
@@ -223,7 +224,7 @@ export default function ClientOnboarding() {
 
     setSaving(true);
     try {
-      const currentSection = schema.steps[currentStep];
+      const currentSection = schema.sections[currentStep];
 
       for (const field of currentSection.fields) {
         if (field.type === "file") continue;
@@ -237,7 +238,7 @@ export default function ClientOnboarding() {
               onboarding_instance_id: instance.id,
               field_key: field.key,
               value: value,
-              section: currentSection.key,
+              section: currentSection.id,
             },
           });
 
@@ -247,7 +248,7 @@ export default function ClientOnboarding() {
           await supabase.from("onboarding_responses").upsert({
             onboarding_instance_id: instance.id,
             field_key: field.key,
-            section: currentSection.key,
+            section: currentSection.id,
             value: value,
             is_sensitive: false,
           }, { onConflict: "onboarding_instance_id,field_key" });
@@ -271,7 +272,7 @@ export default function ClientOnboarding() {
 
   const handleNext = async () => {
     await saveCurrentStep();
-    if (schema && currentStep < schema.steps.length - 1) {
+    if (schema && currentStep < schema.sections.length - 1) {
       setCurrentStep(currentStep + 1);
     }
   };
@@ -356,8 +357,8 @@ export default function ClientOnboarding() {
     );
   }
 
-  const currentSection = schema.steps[currentStep];
-  const isLastStep = currentStep === schema.steps.length - 1;
+  const currentSection = schema.sections[currentStep];
+  const isLastStep = currentStep === schema.sections.length - 1;
 
   return (
     <div className="flex h-screen">
@@ -372,7 +373,7 @@ export default function ClientOnboarding() {
           </div>
 
           <OnboardingProgress
-            steps={schema.steps.map((s) => ({ key: s.key, title: s.title }))}
+            steps={schema.sections.map((s) => ({ key: s.id, title: s.title }))}
             currentStep={currentStep}
             completedSteps={completedSteps}
           />
