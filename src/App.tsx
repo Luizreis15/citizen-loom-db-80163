@@ -35,6 +35,9 @@ import ClientProfile from "./pages/ClientProfile";
 import ClientRequestsAdmin from "./pages/admin/ClientRequestsAdmin";
 import TicketsBoard from "./pages/admin/TicketsBoard";
 import AdminTaskReview from "./pages/admin/AdminTaskReview";
+import AdminOnboarding from "./pages/admin/AdminOnboarding";
+import AdminOnboardingDetail from "./pages/admin/AdminOnboardingDetail";
+import ClientOnboarding from "./pages/ClientOnboarding";
 import CollaboratorDashboard from "./pages/CollaboratorDashboard";
 import CollaboratorTasks from "./pages/CollaboratorTasks";
 import CollaboratorTaskDetail from "./pages/CollaboratorTaskDetail";
@@ -120,6 +123,16 @@ const App = () => {
                     <AdminTaskReview />
                   </ProtectedRoute>
                 } />
+                <Route path="/admin/onboarding" element={
+                  <ProtectedRoute allowedRoles={["Owner", "Admin"]}>
+                    <AdminOnboarding />
+                  </ProtectedRoute>
+                } />
+                <Route path="/admin/onboarding/:id" element={
+                  <ProtectedRoute allowedRoles={["Owner", "Admin"]}>
+                    <AdminOnboardingDetail />
+                  </ProtectedRoute>
+                } />
 
                 {/* Shared Routes */}
                 <Route path="/configuracoes" element={<Configuracoes />} />
@@ -128,6 +141,11 @@ const App = () => {
                 <Route path="/client-portal/dashboard" element={
                   <ProtectedRoute allowedRoles={["Cliente", "Owner", "Admin"]}>
                     <ClientPortalDashboard />
+                  </ProtectedRoute>
+                } />
+                <Route path="/client-portal/onboarding" element={
+                  <ProtectedRoute allowedRoles={["Cliente", "Owner", "Admin"]}>
+                    <ClientOnboarding />
                   </ProtectedRoute>
                 } />
                 <Route path="/client-portal/request" element={
