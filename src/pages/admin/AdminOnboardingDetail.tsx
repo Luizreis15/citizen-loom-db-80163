@@ -351,7 +351,7 @@ export default function AdminOnboardingDetail() {
       </Card>
 
       {/* Sections */}
-      {schema.steps.map((section) => (
+      {schema.steps?.map((section) => (
         <Card key={section.key} className="mb-6">
           <CardHeader>
             <CardTitle className="text-lg">{section.title}</CardTitle>
@@ -359,7 +359,7 @@ export default function AdminOnboardingDetail() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {section.fields.map((field) => (
+              {section.fields?.map((field) => (
                 <div key={field.key} className="flex flex-col sm:flex-row sm:items-center gap-2">
                   <div className="sm:w-1/3 font-medium text-sm flex items-center gap-2">
                     {field.label}
