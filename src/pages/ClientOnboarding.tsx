@@ -8,7 +8,7 @@ import { OnboardingFormField } from "@/components/onboarding/OnboardingFormField
 import { OnboardingProgress } from "@/components/onboarding/OnboardingProgress";
 import { toast } from "sonner";
 import { Loader2, ChevronLeft, ChevronRight, Save, Send } from "lucide-react";
-import { ClientPortalSidebar } from "@/components/ClientPortalSidebar";
+
 import type { Json } from "@/integrations/supabase/types";
 
 interface FieldSchema {
@@ -308,51 +308,42 @@ export default function ClientOnboarding() {
 
   if (loading) {
     return (
-      <div className="flex h-screen">
-        <ClientPortalSidebar />
-        <div className="flex-1 flex items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
 
   if (!instance || !schema) {
     return (
-      <div className="flex h-screen">
-        <ClientPortalSidebar />
-        <div className="flex-1 flex items-center justify-center">
-          <Card className="max-w-md">
-            <CardHeader>
-              <CardTitle>Onboarding não disponível</CardTitle>
-              <CardDescription>
-                Seu onboarding ainda não foi iniciado. Entre em contato com o administrador.
-              </CardDescription>
-            </CardHeader>
-          </Card>
-        </div>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Card className="max-w-md">
+          <CardHeader>
+            <CardTitle>Onboarding não disponível</CardTitle>
+            <CardDescription>
+              Seu onboarding ainda não foi iniciado. Entre em contato com o administrador.
+            </CardDescription>
+          </CardHeader>
+        </Card>
       </div>
     );
   }
 
   if (instance.status === "Concluído" || instance.status === "Aprovado") {
     return (
-      <div className="flex h-screen">
-        <ClientPortalSidebar />
-        <div className="flex-1 flex items-center justify-center">
-          <Card className="max-w-md">
-            <CardHeader>
-              <CardTitle>
-                {instance.status === "Aprovado" ? "Onboarding Aprovado!" : "Onboarding Enviado!"}
-              </CardTitle>
-              <CardDescription>
-                {instance.status === "Aprovado"
-                  ? "Seu onboarding foi revisado e aprovado pela equipe."
-                  : "Seu onboarding foi enviado e está aguardando revisão."}
-              </CardDescription>
-            </CardHeader>
-          </Card>
-        </div>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Card className="max-w-md">
+          <CardHeader>
+            <CardTitle>
+              {instance.status === "Aprovado" ? "Onboarding Aprovado!" : "Onboarding Enviado!"}
+            </CardTitle>
+            <CardDescription>
+              {instance.status === "Aprovado"
+                ? "Seu onboarding foi revisado e aprovado pela equipe."
+                : "Seu onboarding foi enviado e está aguardando revisão."}
+            </CardDescription>
+          </CardHeader>
+        </Card>
       </div>
     );
   }
@@ -361,75 +352,70 @@ export default function ClientOnboarding() {
   const isLastStep = currentStep === schema.sections.length - 1;
 
   return (
-    <div className="flex h-screen">
-      <ClientPortalSidebar />
-      <div className="flex-1 overflow-auto">
-        <div className="container max-w-4xl py-8 px-4">
-          <div className="mb-8">
-            <h1 className="text-2xl font-bold mb-2">Onboarding</h1>
-            <p className="text-muted-foreground">
-              Preencha as informações para configurarmos sua conta
-            </p>
-          </div>
-
-          <OnboardingProgress
-            steps={schema.sections.map((s) => ({ key: s.id, title: s.title }))}
-            currentStep={currentStep}
-            completedSteps={completedSteps}
-          />
-
-          <Card className="mt-8">
-            <CardHeader>
-              <CardTitle>{currentSection.title}</CardTitle>
-              {currentSection.description && (
-                <CardDescription>{currentSection.description}</CardDescription>
-              )}
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {currentSection.fields.map((field) => (
-                <OnboardingFormField
-                  key={field.key}
-                  field={field}
-                  value={formData[field.key] || ""}
-                  onChange={handleFieldChange}
-                  onFileUpload={handleFileUpload}
-                  fileInfo={files[field.key]}
-                />
-              ))}
-
-              <div className="flex justify-between pt-6">
-                <Button
-                  variant="outline"
-                  onClick={handlePrevious}
-                  disabled={currentStep === 0}
-                >
-                  <ChevronLeft className="h-4 w-4 mr-2" />
-                  Anterior
-                </Button>
-
-                <div className="flex gap-2">
-                  <Button variant="outline" onClick={saveCurrentStep} disabled={saving}>
-                    {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
-                    Salvar Rascunho
-                  </Button>
-
-                  {isLastStep ? (
-                    <Button onClick={handleSubmit} disabled={submitting}>
-                      {submitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
-                      Finalizar e Enviar
-                    </Button>
-                  ) : (
-                    <Button onClick={handleNext} disabled={saving}>
-                      Próximo
-                      <ChevronRight className="h-4 w-4 ml-2" />
-                    </Button>
-                  )}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+    <div className="container max-w-4xl py-8 px-4">
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold mb-2">Onboarding</h1>
+        <p className="text-muted-foreground">
+          Preencha as informações para configurarmos sua conta
+        </p>
       </div>
+
+      <OnboardingProgress
+        steps={schema.sections.map((s) => ({ key: s.id, title: s.title }))}
+        currentStep={currentStep}
+        completedSteps={completedSteps}
+      />
+
+      <Card className="mt-8">
+        <CardHeader>
+          <CardTitle>{currentSection.title}</CardTitle>
+          {currentSection.description && (
+            <CardDescription>{currentSection.description}</CardDescription>
+          )}
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {currentSection.fields.map((field) => (
+            <OnboardingFormField
+              key={field.key}
+              field={field}
+              value={formData[field.key] || ""}
+              onChange={handleFieldChange}
+              onFileUpload={handleFileUpload}
+              fileInfo={files[field.key]}
+            />
+          ))}
+
+          <div className="flex justify-between pt-6">
+            <Button
+              variant="outline"
+              onClick={handlePrevious}
+              disabled={currentStep === 0}
+            >
+              <ChevronLeft className="h-4 w-4 mr-2" />
+              Anterior
+            </Button>
+
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={saveCurrentStep} disabled={saving}>
+                {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+                Salvar Rascunho
+              </Button>
+
+              {isLastStep ? (
+                <Button onClick={handleSubmit} disabled={submitting}>
+                  {submitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
+                  Finalizar e Enviar
+                </Button>
+              ) : (
+                <Button onClick={handleNext} disabled={saving}>
+                  Próximo
+                  <ChevronRight className="h-4 w-4 ml-2" />
+                </Button>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
