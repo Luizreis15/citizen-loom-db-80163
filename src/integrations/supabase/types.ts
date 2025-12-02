@@ -302,6 +302,7 @@ export type Database = {
       clients: {
         Row: {
           activated_at: string | null
+          client_type: string | null
           company: string | null
           created_at: string
           email: string | null
@@ -315,6 +316,7 @@ export type Database = {
         }
         Insert: {
           activated_at?: string | null
+          client_type?: string | null
           company?: string | null
           created_at?: string
           email?: string | null
@@ -328,6 +330,7 @@ export type Database = {
         }
         Update: {
           activated_at?: string | null
+          client_type?: string | null
           company?: string | null
           created_at?: string
           email?: string | null
@@ -456,6 +459,226 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      onboarding_attachments: {
+        Row: {
+          created_at: string
+          field_key: string
+          file_name: string
+          file_size: number | null
+          file_type: string | null
+          file_url: string
+          id: string
+          onboarding_instance_id: string
+          section: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          field_key: string
+          file_name: string
+          file_size?: number | null
+          file_type?: string | null
+          file_url: string
+          id?: string
+          onboarding_instance_id: string
+          section: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          field_key?: string
+          file_name?: string
+          file_size?: number | null
+          file_type?: string | null
+          file_url?: string
+          id?: string
+          onboarding_instance_id?: string
+          section?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "onboarding_attachments_onboarding_instance_id_fkey"
+            columns: ["onboarding_instance_id"]
+            isOneToOne: false
+            referencedRelation: "onboarding_instances"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      onboarding_audit_log: {
+        Row: {
+          action: string
+          created_at: string
+          field_key: string
+          id: string
+          onboarding_instance_id: string
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          field_key: string
+          id?: string
+          onboarding_instance_id: string
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          field_key?: string
+          id?: string
+          onboarding_instance_id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "onboarding_audit_log_onboarding_instance_id_fkey"
+            columns: ["onboarding_instance_id"]
+            isOneToOne: false
+            referencedRelation: "onboarding_instances"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      onboarding_instances: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          client_id: string
+          completed_at: string | null
+          created_at: string
+          current_step: number
+          id: string
+          reopened_at: string | null
+          reopened_by: string | null
+          status: string
+          template_id: string
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          client_id: string
+          completed_at?: string | null
+          created_at?: string
+          current_step?: number
+          id?: string
+          reopened_at?: string | null
+          reopened_by?: string | null
+          status?: string
+          template_id: string
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          client_id?: string
+          completed_at?: string | null
+          created_at?: string
+          current_step?: number
+          id?: string
+          reopened_at?: string | null
+          reopened_by?: string | null
+          status?: string
+          template_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "onboarding_instances_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "onboarding_instances_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "tasks_with_details"
+            referencedColumns: ["client_owner_id"]
+          },
+          {
+            foreignKeyName: "onboarding_instances_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "onboarding_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      onboarding_responses: {
+        Row: {
+          created_at: string
+          field_key: string
+          id: string
+          is_sensitive: boolean
+          onboarding_instance_id: string
+          section: string
+          updated_at: string
+          value: string | null
+        }
+        Insert: {
+          created_at?: string
+          field_key: string
+          id?: string
+          is_sensitive?: boolean
+          onboarding_instance_id: string
+          section: string
+          updated_at?: string
+          value?: string | null
+        }
+        Update: {
+          created_at?: string
+          field_key?: string
+          id?: string
+          is_sensitive?: boolean
+          onboarding_instance_id?: string
+          section?: string
+          updated_at?: string
+          value?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "onboarding_responses_onboarding_instance_id_fkey"
+            columns: ["onboarding_instance_id"]
+            isOneToOne: false
+            referencedRelation: "onboarding_instances"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      onboarding_templates: {
+        Row: {
+          client_type: string
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          schema: Json
+          updated_at: string
+        }
+        Insert: {
+          client_type: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          schema: Json
+          updated_at?: string
+        }
+        Update: {
+          client_type?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          schema?: Json
+          updated_at?: string
+        }
+        Relationships: []
       }
       products: {
         Row: {
