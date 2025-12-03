@@ -37,7 +37,7 @@ interface SectionSchema {
 }
 
 interface TemplateSchema {
-  steps: SectionSchema[];
+  sections: SectionSchema[];
 }
 
 export default function AdminOnboardingDetail() {
@@ -224,10 +224,32 @@ export default function AdminOnboardingDetail() {
     }
   };
 
+  const getSectionProgress = (section: SectionSchema) => {
+    const fields = section.fields || [];
+    const filled = fields.filter(f => {
+      if (f.type === "file") {
+        return !!attachments[f.key];
+      }
+      const response = responses[f.key];
+      return response && response.value && response.value.trim() !== '';
+    }).length;
+    return { filled, total: fields.length };
+  };
+
+  const isFieldFilled = (field: FieldSchema) => {
+    if (field.type === "file") {
+      return !!attachments[field.key];
+    }
+    const response = responses[field.key];
+    return response && response.value && response.value.trim() !== '';
+  };
+
   const renderFieldValue = (field: FieldSchema) => {
     if (field.type === "file") {
       const attachment = attachments[field.key];
-      if (!attachment) return <span className="text-muted-foreground">Não enviado</span>;
+      if (!attachment) {
+        return <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-300">Pendente</Badge>;
+      }
       
       return (
         <Button variant="outline" size="sm" onClick={() => handleDownloadFile(attachment)}>
@@ -238,7 +260,9 @@ export default function AdminOnboardingDetail() {
     }
 
     const response = responses[field.key];
-    if (!response) return <span className="text-muted-foreground">Não preenchido</span>;
+    if (!response || !response.value || response.value.trim() === '') {
+      return <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-300">Pendente</Badge>;
+    }
 
     if (field.sensitive) {
       const isDecrypted = decryptedFields[field.key] !== undefined;
@@ -255,7 +279,7 @@ export default function AdminOnboardingDetail() {
             </>
           ) : (
             <>
-              <span className="text-muted-foreground">••••••••</span>
+              <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-300">Preenchido</Badge>
               <Button
                 variant="ghost"
                 size="sm"
@@ -274,7 +298,12 @@ export default function AdminOnboardingDetail() {
       );
     }
 
-    return <span>{response.value || "-"}</span>;
+    return (
+      <div className="flex items-center gap-2">
+        <CheckCircle className="h-4 w-4 text-green-500" />
+        <span>{response.value}</span>
+      </div>
+    );
   };
 
   if (loading) {
@@ -351,27 +380,49 @@ export default function AdminOnboardingDetail() {
       </Card>
 
       {/* Sections */}
-      {schema.steps?.map((section) => (
-        <Card key={section.key} className="mb-6">
-          <CardHeader>
-            <CardTitle className="text-lg">{section.title}</CardTitle>
-            {section.description && <CardDescription>{section.description}</CardDescription>}
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {section.fields?.map((field) => (
-                <div key={field.key} className="flex flex-col sm:flex-row sm:items-center gap-2">
-                  <div className="sm:w-1/3 font-medium text-sm flex items-center gap-2">
-                    {field.label}
-                    {field.sensitive && <Shield className="h-3 w-3 text-muted-foreground" />}
-                  </div>
-                  <div className="sm:w-2/3">{renderFieldValue(field)}</div>
+      {schema.sections?.map((section) => {
+        const progress = getSectionProgress(section);
+        const isComplete = progress.filled === progress.total && progress.total > 0;
+        
+        return (
+          <Card key={section.key} className="mb-6">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg">{section.title}</CardTitle>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">
+                    {progress.filled}/{progress.total} campos
+                  </span>
+                  {isComplete ? (
+                    <Badge className="bg-green-500/10 text-green-600 border-green-300" variant="outline">
+                      <CheckCircle className="h-3 w-3 mr-1" />
+                      Completo
+                    </Badge>
+                  ) : (
+                    <Badge className="bg-amber-500/10 text-amber-600 border-amber-300" variant="outline">
+                      Parcial
+                    </Badge>
+                  )}
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      ))}
+              </div>
+              {section.description && <CardDescription>{section.description}</CardDescription>}
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {section.fields?.map((field) => (
+                  <div key={field.key} className="flex flex-col sm:flex-row sm:items-center gap-2">
+                    <div className="sm:w-1/3 font-medium text-sm flex items-center gap-2">
+                      {field.label}
+                      {field.sensitive && <Shield className="h-3 w-3 text-muted-foreground" />}
+                    </div>
+                    <div className="sm:w-2/3">{renderFieldValue(field)}</div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })}
 
       {/* Audit Log */}
       <Card>
