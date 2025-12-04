@@ -45,7 +45,8 @@ const handler = async (req: Request): Promise<Response> => {
     // Extract token from the generated link
     const resetUrl = new URL(linkData.properties.action_link);
     const token = resetUrl.searchParams.get('token');
-    const resetLink = `${Deno.env.get("APP_URL")}/reset-password?token=${token}`;
+    const appUrl = (Deno.env.get("APP_URL") || "").replace(/\/$/, ""); // Remove trailing slash
+    const resetLink = `${appUrl}/reset-password?token=${token}`;
 
     // Send email via Resend
     const emailResponse = await resend.emails.send({
