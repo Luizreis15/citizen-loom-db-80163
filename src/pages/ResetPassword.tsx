@@ -98,6 +98,15 @@ const ResetPassword = () => {
         throw error;
       }
 
+      // Clear the require_password_change flag
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase
+          .from("profiles")
+          .update({ require_password_change: false })
+          .eq("id", user.id);
+      }
+
       toast.success("Senha atualizada com sucesso! Redirecionando para o login...");
       
       // Sign out to force login with new password
