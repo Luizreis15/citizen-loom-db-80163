@@ -158,6 +158,73 @@ export type Database = {
           },
         ]
       }
+      client_contracted_services: {
+        Row: {
+          client_id: string
+          created_at: string | null
+          data_fim: string | null
+          data_inicio: string
+          id: string
+          is_active: boolean | null
+          is_plano_principal: boolean | null
+          observacoes: string | null
+          service_id: string
+          tipo_cobranca: string
+          updated_at: string | null
+          valor_acordado: number
+        }
+        Insert: {
+          client_id: string
+          created_at?: string | null
+          data_fim?: string | null
+          data_inicio: string
+          id?: string
+          is_active?: boolean | null
+          is_plano_principal?: boolean | null
+          observacoes?: string | null
+          service_id: string
+          tipo_cobranca: string
+          updated_at?: string | null
+          valor_acordado: number
+        }
+        Update: {
+          client_id?: string
+          created_at?: string | null
+          data_fim?: string | null
+          data_inicio?: string
+          id?: string
+          is_active?: boolean | null
+          is_plano_principal?: boolean | null
+          observacoes?: string | null
+          service_id?: string
+          tipo_cobranca?: string
+          updated_at?: string | null
+          valor_acordado?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_contracted_services_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_contracted_services_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "tasks_with_details"
+            referencedColumns: ["client_owner_id"]
+          },
+          {
+            foreignKeyName: "client_contracted_services_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "service_catalog"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_requests: {
         Row: {
           client_id: string
@@ -862,6 +929,48 @@ export type Database = {
           id?: number
           name?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      service_catalog: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          eh_plano_principal: boolean | null
+          id: string
+          is_active: boolean | null
+          itens_inclusos: string[] | null
+          name: string
+          ordem_exibicao: number | null
+          preco_padrao: number | null
+          tipo_servico: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          eh_plano_principal?: boolean | null
+          id?: string
+          is_active?: boolean | null
+          itens_inclusos?: string[] | null
+          name: string
+          ordem_exibicao?: number | null
+          preco_padrao?: number | null
+          tipo_servico: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          eh_plano_principal?: boolean | null
+          id?: string
+          is_active?: boolean | null
+          itens_inclusos?: string[] | null
+          name?: string
+          ordem_exibicao?: number | null
+          preco_padrao?: number | null
+          tipo_servico?: string
+          updated_at?: string | null
         }
         Relationships: []
       }
