@@ -24,9 +24,11 @@ interface ContractedService {
   data_fim: string | null;
   observacoes: string | null;
   service: {
+    id: string;
     name: string;
     description: string | null;
     itens_inclusos: string[] | null;
+    ordem_exibicao: number | null;
   };
 }
 
@@ -38,11 +40,20 @@ interface Client {
   status: string;
 }
 
+interface ServiceCatalog {
+  id: string;
+  name: string;
+  itens_inclusos: string[] | null;
+  ordem_exibicao: number | null;
+  eh_plano_principal: boolean;
+}
+
 export default function ClientPackage() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [client, setClient] = useState<Client | null>(null);
   const [contractedServices, setContractedServices] = useState<ContractedService[]>([]);
+  const [allPlans, setAllPlans] = useState<ServiceCatalog[]>([]);
 
   useEffect(() => {
     if (user) {
@@ -62,6 +73,13 @@ export default function ClientPackage() {
 
       if (!profile?.client_id) return;
 
+      // Fetch all plans for hierarchy expansion
+      const { data: plansData } = await supabase
+        .from("service_catalog")
+        .select("id, name, itens_inclusos, ordem_exibicao, eh_plano_principal")
+        .eq("eh_plano_principal", true)
+        .order("ordem_exibicao", { ascending: true });
+
       const { data: clientData } = await supabase
         .from("clients")
         .select("*")
@@ -72,12 +90,13 @@ export default function ClientPackage() {
         .from("client_contracted_services")
         .select(`
           *,
-          service:service_catalog(name, description, itens_inclusos)
+          service:service_catalog(id, name, description, itens_inclusos, ordem_exibicao)
         `)
         .eq("client_id", profile.client_id)
         .eq("is_active", true)
         .order("is_plano_principal", { ascending: false });
 
+      setAllPlans(plansData || []);
       setClient(clientData);
       setContractedServices(servicesData || []);
     } catch (error) {
@@ -85,6 +104,39 @@ export default function ClientPackage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Get all included items, expanding lower-tier plans
+  const getExpandedItensInclusos = (plano: ContractedService): string[] => {
+    const currentOrdem = plano.service.ordem_exibicao || 0;
+    const expandedItems: string[] = [];
+
+    // Get items from all lower-tier plans first
+    allPlans
+      .filter(p => p.ordem_exibicao && p.ordem_exibicao < currentOrdem)
+      .sort((a, b) => (a.ordem_exibicao || 0) - (b.ordem_exibicao || 0))
+      .forEach(lowerPlan => {
+        if (lowerPlan.itens_inclusos) {
+          lowerPlan.itens_inclusos.forEach(item => {
+            // Skip "Tudo do Plano X" items
+            if (!item.startsWith("Tudo do Plano")) {
+              expandedItems.push(item);
+            }
+          });
+        }
+      });
+
+    // Add current plan items (excluding "Tudo do Plano X")
+    if (plano.service.itens_inclusos) {
+      plano.service.itens_inclusos.forEach(item => {
+        if (!item.startsWith("Tudo do Plano")) {
+          expandedItems.push(item);
+        }
+      });
+    }
+
+    // Remove duplicates
+    return [...new Set(expandedItems)];
   };
 
   const planoAtual = contractedServices.find((s) => s.is_plano_principal);
@@ -174,19 +226,22 @@ export default function ClientPackage() {
               Desde: {format(new Date(planoAtual.data_inicio), "dd/MM/yyyy", { locale: ptBR })}
             </div>
 
-            {planoAtual.service.itens_inclusos && planoAtual.service.itens_inclusos.length > 0 && (
-              <div className="pt-2 border-t">
-                <p className="text-sm font-medium mb-2">O que está incluso:</p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                  {planoAtual.service.itens_inclusos.map((item, i) => (
-                    <div key={i} className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Check className="h-4 w-4 text-green-600" />
-                      {item}
-                    </div>
-                  ))}
+            {(() => {
+              const expandedItems = getExpandedItensInclusos(planoAtual);
+              return expandedItems.length > 0 ? (
+                <div className="pt-2 border-t">
+                  <p className="text-sm font-medium mb-2">O que está incluso:</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    {expandedItems.map((item, i) => (
+                      <div key={i} className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Check className="h-4 w-4 text-green-600" />
+                        {item}
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              ) : null;
+            })()}
           </CardContent>
         </Card>
       )}
