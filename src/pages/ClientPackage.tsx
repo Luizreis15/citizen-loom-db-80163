@@ -108,7 +108,7 @@ export default function ClientPackage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold">Meu Pacote</h1>
+      <h1 className="text-3xl font-bold">Meu Contrato</h1>
 
       {/* Informações do Contrato */}
       <Card>
