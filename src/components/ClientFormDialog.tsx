@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Plus, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
+import { ClientContractedServicesSection, ContractedService } from "./ClientContractedServicesSection";
 
 const clientSchema = z.object({
   name: z.string().trim().min(1, "Nome é obrigatório").max(100),
@@ -92,8 +93,12 @@ export function ClientFormDialog({ open, onOpenChange, onSuccess, client }: Clie
     rules_and_observations: "",
   });
   
-  // Tab 3: Client Services
+  // Tab 3: Client Services (legacy)
   const [clientServices, setClientServices] = useState<ClientService[]>([]);
+  
+  // Tab 4: Contracted Services (new)
+  const [contractedServices, setContractedServices] = useState<ContractedService[]>([]);
+  
   const [sendWelcomeEmail, setSendWelcomeEmail] = useState(true);
   
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -238,7 +243,7 @@ export function ClientFormDialog({ open, onOpenChange, onSuccess, client }: Clie
         if (brandError) throw brandError;
       }
 
-      // 3. Create client services
+      // 3. Create client services (legacy)
       const validServices = clientServices.filter(
         (service) =>
           service.product_id > 0 &&
@@ -260,6 +265,39 @@ export function ClientFormDialog({ open, onOpenChange, onSuccess, client }: Clie
           .insert(servicesToInsert as any);
 
         if (servicesError) throw servicesError;
+      }
+
+      // 4. Create contracted services (new)
+      const validContractedServices = contractedServices.filter(
+        (service) => service.service_id && service.valor_acordado && service.data_inicio
+      );
+
+      if (validContractedServices.length > 0) {
+        // First, delete existing contracted services if editing
+        if (client) {
+          await supabase
+            .from("client_contracted_services")
+            .delete()
+            .eq("client_id", clientId);
+        }
+
+        const contractedToInsert = validContractedServices.map((service) => ({
+          client_id: clientId,
+          service_id: service.service_id,
+          valor_acordado: parseFloat(service.valor_acordado),
+          tipo_cobranca: service.tipo_cobranca,
+          is_plano_principal: service.is_plano_principal,
+          data_inicio: service.data_inicio,
+          data_fim: service.data_fim || null,
+          observacoes: service.observacoes || null,
+          is_active: true,
+        }));
+
+        const { error: contractedError } = await supabase
+          .from("client_contracted_services")
+          .insert(contractedToInsert as any);
+
+        if (contractedError) throw contractedError;
       }
 
       // Send welcome email if checkbox is marked and email is provided
@@ -310,6 +348,7 @@ export function ClientFormDialog({ open, onOpenChange, onSuccess, client }: Clie
       rules_and_observations: "",
     });
     setClientServices([]);
+    setContractedServices([]);
     setSendWelcomeEmail(true);
     setErrors({});
   };
@@ -325,10 +364,11 @@ export function ClientFormDialog({ open, onOpenChange, onSuccess, client }: Clie
         </DialogHeader>
 
         <Tabs defaultValue="data" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="data">Dados Cadastrais</TabsTrigger>
-            <TabsTrigger value="brand">Identidade Visual</TabsTrigger>
-            <TabsTrigger value="services">Produtos e Preços</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="data">Dados</TabsTrigger>
+            <TabsTrigger value="brand">Identidade</TabsTrigger>
+            <TabsTrigger value="contracted">Serviços</TabsTrigger>
+            <TabsTrigger value="services">Produtos Avulsos</TabsTrigger>
           </TabsList>
 
           {/* Tab 1: Client Data */}
@@ -596,10 +636,19 @@ export function ClientFormDialog({ open, onOpenChange, onSuccess, client }: Clie
               </div>
             </TabsContent>
 
-          {/* Tab 3: Client Services */}
+          {/* Tab 3: Contracted Services (new) */}
+          <TabsContent value="contracted" className="space-y-4">
+            <ClientContractedServicesSection
+              clientId={client?.id}
+              contractedServices={contractedServices}
+              setContractedServices={setContractedServices}
+            />
+          </TabsContent>
+
+          {/* Tab 4: Client Services (legacy - produtos avulsos) */}
           <TabsContent value="services" className="space-y-4">
             <div className="flex items-center justify-between">
-              <Label className="text-base font-semibold">Serviços Contratados</Label>
+              <Label className="text-base font-semibold">Produtos Avulsos (Sistema Antigo)</Label>
               <Button type="button" size="sm" onClick={handleAddService}>
                 <Plus className="h-4 w-4 mr-1" />
                 Adicionar Serviço

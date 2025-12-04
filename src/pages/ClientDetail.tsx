@@ -12,11 +12,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ArrowLeft, FolderKanban, Plus } from "lucide-react";
+import { ArrowLeft, FolderKanban, Plus, Briefcase } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale/pt-BR";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { ClientContractedServicesView } from "@/components/ClientContractedServicesView";
 
 interface Client {
   id: string;
@@ -155,6 +156,23 @@ const ClientDetail = () => {
         </Card>
       </div>
 
+      {/* Serviços Contratados */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Briefcase className="h-5 w-5" />
+            Serviços Contratados
+          </CardTitle>
+          <CardDescription>
+            Planos e produtos adicionais contratados pelo cliente
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ClientContractedServicesView clientId={id!} />
+        </CardContent>
+      </Card>
+
+      {/* Projetos */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
