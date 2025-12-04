@@ -29,7 +29,7 @@ export function ClientPortalSidebar() {
     { to: "/client-portal/request", icon: FileText, label: "Solicitar Trabalho" },
     { to: "/client-portal/requests", icon: Inbox, label: "Meus Pedidos" },
     { to: "/client-portal/financial", icon: DollarSign, label: "Financeiro" },
-    { to: "/client-portal/package", icon: Package, label: "Meu Pacote" },
+    { to: "/client-portal/package", icon: Package, label: "Meu Contrato" },
     { to: "/client-portal/profile", icon: User, label: "Perfil" },
   ];
 
