@@ -164,8 +164,8 @@ const handler = async (req: Request): Promise<Response> => {
       }
     }
 
-    // Create login URL
-    const appUrl = Deno.env.get("APP_URL") || "https://app.digitalhera.com.br";
+    // Create login URL (remove trailing slash to prevent double slashes)
+    const appUrl = (Deno.env.get("APP_URL") || "https://digitalhera.com.br").replace(/\/$/, "");
     const loginUrl = `${appUrl}/login`;
 
     console.log("Sending welcome email to:", client_email);
