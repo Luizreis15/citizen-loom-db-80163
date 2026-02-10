@@ -190,6 +190,7 @@ export default function ExpertQuiz() {
           }`}
         >
           <QuizQuestionComponent
+            key={currentQuestion.key}
             question={currentQuestion}
             questionNumber={currentIdx + 1}
             defaultValue={answers[currentQuestion.key]}
