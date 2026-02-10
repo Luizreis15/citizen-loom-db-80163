@@ -1,49 +1,27 @@
 
+# Fix: Previous answer showing on next question
 
-## Envio Automatico de Email com Link do Quiz
+## Problem
+When advancing to the next question in the quiz, the input field still shows the previous answer. This happens because React reuses the same `QuizQuestion` component instance -- the `useState(defaultValue)` only runs on initial mount, not when props change.
 
-Quando o admin criar um novo quiz no painel, o sistema envia automaticamente um email premium para o expert com o link do questionario.
+## Solution
+Add a `key={currentQuestion.key}` prop to the `QuizQuestionComponent` in `ExpertQuiz.tsx`. This forces React to destroy and recreate the component when the question changes, resetting all internal state (text input value, selected options).
 
----
+## Technical Details
 
-### Arquivos a criar
+**File:** `src/pages/ExpertQuiz.tsx`
 
-**1. `supabase/functions/send-expert-quiz-invite/index.ts`** -- Edge function de envio
+Change the `QuizQuestionComponent` render to include a `key` prop:
 
-- Recebe: `expert_name`, `expert_email`, `quiz_link`, `project_name` (opcional), `expires_in_days`
-- Usa Resend com `from: "Digital Hera <noreply@digitalhera.com.br>"`
-- Email HTML premium com paleta escura/dourada matching o design do quiz:
-  - Header com gradiente grafite e logo Digital Hera
-  - Saudacao personalizada com nome do expert
-  - Texto explicando o diagnostico digital
-  - Botao CTA dourado com link do quiz
-  - Info de validade do link
-  - Footer elegante
-- CORS headers padrao
-- Secrets necessarios: `RESEND_API_KEY` (ja configurado)
+```tsx
+<QuizQuestionComponent
+  key={currentQuestion.key}   // <-- add this line
+  question={currentQuestion}
+  questionNumber={currentIdx + 1}
+  defaultValue={answers[currentQuestion.key]}
+  onAnswer={(val) => handleAnswer(currentQuestion.key, currentQuestion.block, val)}
+  onBack={currentIdx > 0 ? handleBack : undefined}
+/>
+```
 
-**2. `supabase/config.toml`** -- Adicionar configuracao
-
-- Adicionar `[functions.send-expert-quiz-invite]` com `verify_jwt = true`
-
----
-
-### Arquivos a modificar
-
-**3. `src/pages/admin/AdminExpertQuiz.tsx`** -- Chamar edge function apos criar quiz
-
-- No `createMutation`, apos inserir na tabela com sucesso, invocar a edge function `send-expert-quiz-invite` passando nome, email, link do quiz e dias de validade
-- Atualizar toast de sucesso para "Quiz criado e email enviado!"
-- Em caso de erro no envio do email (mas quiz criado), mostrar toast informando que o quiz foi criado mas o email falhou, com opcao de copiar o link manualmente
-- Adicionar botao de reenvio de email na tabela (icone Mail) para quizzes ja criados
-
----
-
-### Detalhes tecnicos
-
-- A edge function segue o mesmo padrao de `send-welcome-client` (Resend + CORS + validacao)
-- O link do quiz e construido como `{APP_URL}/quiz/{token}` usando o secret APP_URL
-- O email HTML usa inline styles com a paleta premium (grafite #1a1a2e, dourado #c9a84c, creme #f5f0e8)
-- Nenhuma migracao de banco necessaria
-- O JWT do admin autenticado e usado para autorizar a chamada da edge function
-
+This is a one-line fix. No other files need to change.
