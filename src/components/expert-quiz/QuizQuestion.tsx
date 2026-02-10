@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import { Check, Send, ChevronUp, ChevronDown } from "lucide-react";
+import { Check, ChevronUp, ChevronDown } from "lucide-react";
 import type { QuizQuestion as QuizQuestionType } from "./quizSchema";
 
 interface QuizQuestionProps {
@@ -36,7 +36,7 @@ export function QuizQuestion({ question, questionNumber, onAnswer, onBack, defau
     <div className="space-y-8 animate-fade-in">
       {/* Block label */}
       <div className="flex items-center gap-2">
-        <span className="text-xs font-semibold text-[#7c3aed]/70 uppercase tracking-wider">
+        <span className="text-[10px] font-semibold text-[#c9a84c]/60 uppercase tracking-[0.2em]">
           {question.blockLabel}
         </span>
       </div>
@@ -44,15 +44,15 @@ export function QuizQuestion({ question, questionNumber, onAnswer, onBack, defau
       {/* Question */}
       <div className="space-y-2">
         <div className="flex items-start gap-3">
-          <span className="flex-shrink-0 flex items-center justify-center h-8 w-8 rounded-lg bg-[#7c3aed]/10 text-[#7c3aed] text-sm font-bold">
+          <span className="flex-shrink-0 flex items-center justify-center h-8 w-8 rounded-lg bg-[#c9a84c]/10 text-[#c9a84c] text-sm font-semibold">
             {questionNumber}
           </span>
-          <h2 className="text-xl md:text-2xl font-bold text-foreground leading-tight pt-0.5">
+          <h2 className="text-xl md:text-2xl font-semibold text-[#f5f0e8] leading-tight pt-0.5 tracking-tight">
             {question.label}
           </h2>
         </div>
         {!question.required && (
-          <p className="text-xs text-muted-foreground ml-11">Opcional</p>
+          <p className="text-xs text-[#9ca3af]/60 ml-11 tracking-wide">Opcional</p>
         )}
       </div>
 
@@ -68,17 +68,17 @@ export function QuizQuestion({ question, questionNumber, onAnswer, onBack, defau
                   key={option}
                   onClick={() => onAnswer(option)}
                   className={cn(
-                    "w-full flex items-center gap-3 rounded-xl border-2 px-4 py-3 text-left transition-all duration-200 text-sm md:text-base",
+                    "w-full flex items-center gap-3 rounded-xl border px-4 py-3 text-left transition-all duration-200 text-sm md:text-base",
                     isSelected
-                      ? "border-[#7c3aed] bg-[#7c3aed]/10 text-foreground"
-                      : "border-border/60 hover:border-[#7c3aed]/50 hover:bg-[#7c3aed]/5 text-foreground"
+                      ? "border-[#c9a84c]/60 bg-[#c9a84c]/10 text-[#f5f0e8]"
+                      : "border-[#2a2a3e] hover:border-[#c9a84c]/30 hover:bg-[#2a2a3e]/50 text-[#f5f0e8]/80"
                   )}
                 >
                   <span className={cn(
-                    "flex-shrink-0 h-7 w-7 rounded-lg flex items-center justify-center text-xs font-bold border-2 transition-colors",
+                    "flex-shrink-0 h-7 w-7 rounded-lg flex items-center justify-center text-xs font-semibold border transition-colors",
                     isSelected
-                      ? "border-[#7c3aed] bg-[#7c3aed] text-white"
-                      : "border-border/60 text-muted-foreground"
+                      ? "border-[#c9a84c] bg-[#c9a84c] text-[#1a1a2e]"
+                      : "border-[#3a3a4e] text-[#9ca3af]"
                   )}>
                     {letter}
                   </span>
@@ -104,17 +104,17 @@ export function QuizQuestion({ question, questionNumber, onAnswer, onBack, defau
                       );
                     }}
                     className={cn(
-                      "w-full flex items-center gap-3 rounded-xl border-2 px-4 py-3 text-left transition-all duration-200 text-sm md:text-base",
+                      "w-full flex items-center gap-3 rounded-xl border px-4 py-3 text-left transition-all duration-200 text-sm md:text-base",
                       isSelected
-                        ? "border-[#7c3aed] bg-[#7c3aed]/10 text-foreground"
-                        : "border-border/60 hover:border-[#7c3aed]/50 hover:bg-[#7c3aed]/5 text-foreground"
+                        ? "border-[#c9a84c]/60 bg-[#c9a84c]/10 text-[#f5f0e8]"
+                        : "border-[#2a2a3e] hover:border-[#c9a84c]/30 hover:bg-[#2a2a3e]/50 text-[#f5f0e8]/80"
                     )}
                   >
                     <span className={cn(
-                      "flex-shrink-0 h-7 w-7 rounded-lg flex items-center justify-center text-xs font-bold border-2 transition-colors",
+                      "flex-shrink-0 h-7 w-7 rounded-lg flex items-center justify-center text-xs font-semibold border transition-colors",
                       isSelected
-                        ? "border-[#7c3aed] bg-[#7c3aed] text-white"
-                        : "border-border/60 text-muted-foreground"
+                        ? "border-[#c9a84c] bg-[#c9a84c] text-[#1a1a2e]"
+                        : "border-[#3a3a4e] text-[#9ca3af]"
                     )}>
                       {isSelected ? <Check className="h-4 w-4" /> : letter}
                     </span>
@@ -126,7 +126,7 @@ export function QuizQuestion({ question, questionNumber, onAnswer, onBack, defau
             {selectedOptions.length > 0 && (
               <Button
                 onClick={() => onAnswer(JSON.stringify(selectedOptions))}
-                className="rounded-xl h-12 px-8 bg-[#7c3aed] hover:bg-[#6d28d9] text-white font-semibold shadow-lg shadow-[#7c3aed]/25 transition-all"
+                className="rounded-xl h-12 px-8 bg-gradient-to-r from-[#c9a84c] to-[#d4af37] hover:from-[#d4af37] hover:to-[#c9a84c] text-[#1a1a2e] font-semibold shadow-lg shadow-[#c9a84c]/20 transition-all tracking-wide"
               >
                 OK <Check className="ml-2 h-4 w-4" />
               </Button>
@@ -138,19 +138,19 @@ export function QuizQuestion({ question, questionNumber, onAnswer, onBack, defau
               value={textValue}
               onChange={(e) => setTextValue(e.target.value)}
               placeholder={question.placeholder || "Digite sua resposta..."}
-              className="min-h-[120px] resize-none rounded-xl border-2 border-border/60 focus:border-[#7c3aed] text-base px-4 py-3 transition-colors"
+              className="min-h-[120px] resize-none rounded-xl border border-[#2a2a3e] bg-transparent focus:border-[#c9a84c]/60 text-base px-4 py-3 transition-colors text-[#f5f0e8] placeholder:text-[#9ca3af]/40"
               autoFocus
             />
             <div className="flex items-center gap-3">
               <Button
                 onClick={handleSubmitText}
                 disabled={question.required && !textValue.trim()}
-                className="rounded-xl h-12 px-8 bg-[#7c3aed] hover:bg-[#6d28d9] text-white font-semibold shadow-lg shadow-[#7c3aed]/25 transition-all"
+                className="rounded-xl h-12 px-8 bg-gradient-to-r from-[#c9a84c] to-[#d4af37] hover:from-[#d4af37] hover:to-[#c9a84c] text-[#1a1a2e] font-semibold shadow-lg shadow-[#c9a84c]/20 transition-all tracking-wide disabled:opacity-40"
               >
                 OK <Check className="ml-2 h-4 w-4" />
               </Button>
-              <span className="text-xs text-muted-foreground">
-                ou pressione <kbd className="px-1.5 py-0.5 rounded bg-muted text-[10px] font-mono">Enter</kbd>
+              <span className="text-xs text-[#9ca3af]/40">
+                ou pressione <kbd className="px-1.5 py-0.5 rounded bg-[#2a2a3e] text-[10px] font-mono text-[#9ca3af]/60">Enter</kbd>
               </span>
             </div>
           </div>
@@ -162,7 +162,7 @@ export function QuizQuestion({ question, questionNumber, onAnswer, onBack, defau
               value={textValue}
               onChange={(e) => setTextValue(e.target.value)}
               placeholder={question.placeholder || "Digite sua resposta..."}
-              className="rounded-xl border-2 border-border/60 focus:border-[#7c3aed] h-14 text-base px-4 transition-colors"
+              className="rounded-xl border border-[#2a2a3e] bg-transparent focus:border-[#c9a84c]/60 h-14 text-base px-4 transition-colors text-[#f5f0e8] placeholder:text-[#9ca3af]/40"
               autoFocus
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
@@ -175,12 +175,12 @@ export function QuizQuestion({ question, questionNumber, onAnswer, onBack, defau
               <Button
                 onClick={handleSubmitText}
                 disabled={question.required && !textValue.trim()}
-                className="rounded-xl h-12 px-8 bg-[#7c3aed] hover:bg-[#6d28d9] text-white font-semibold shadow-lg shadow-[#7c3aed]/25 transition-all"
+                className="rounded-xl h-12 px-8 bg-gradient-to-r from-[#c9a84c] to-[#d4af37] hover:from-[#d4af37] hover:to-[#c9a84c] text-[#1a1a2e] font-semibold shadow-lg shadow-[#c9a84c]/20 transition-all tracking-wide disabled:opacity-40"
               >
                 OK <Check className="ml-2 h-4 w-4" />
               </Button>
-              <span className="text-xs text-muted-foreground">
-                ou pressione <kbd className="px-1.5 py-0.5 rounded bg-muted text-[10px] font-mono">Enter</kbd>
+              <span className="text-xs text-[#9ca3af]/40">
+                ou pressione <kbd className="px-1.5 py-0.5 rounded bg-[#2a2a3e] text-[10px] font-mono text-[#9ca3af]/60">Enter</kbd>
               </span>
             </div>
           </div>
@@ -191,7 +191,7 @@ export function QuizQuestion({ question, questionNumber, onAnswer, onBack, defau
           {onBack && (
             <button
               onClick={onBack}
-              className="text-xs text-muted-foreground hover:text-[#7c3aed] transition-colors flex items-center gap-1"
+              className="text-xs text-[#9ca3af]/60 hover:text-[#c9a84c] transition-colors flex items-center gap-1 tracking-wide"
             >
               <ChevronUp className="h-3 w-3" /> Voltar
             </button>
@@ -199,7 +199,7 @@ export function QuizQuestion({ question, questionNumber, onAnswer, onBack, defau
           {!question.required && question.type !== "single-select" && question.type !== "multi-select" && (
             <button
               onClick={() => onAnswer("")}
-              className="text-xs text-muted-foreground hover:text-[#7c3aed] transition-colors flex items-center gap-1"
+              className="text-xs text-[#9ca3af]/60 hover:text-[#c9a84c] transition-colors flex items-center gap-1 tracking-wide"
             >
               Pular <ChevronDown className="h-3 w-3" />
             </button>
