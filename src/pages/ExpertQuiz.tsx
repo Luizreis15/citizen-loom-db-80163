@@ -8,6 +8,7 @@ import { QuizInput } from "@/components/expert-quiz/QuizInput";
 import { QuizProgress } from "@/components/expert-quiz/QuizProgress";
 import { getVisibleQuestions } from "@/components/expert-quiz/quizSchema";
 import { Loader2, AlertCircle } from "lucide-react";
+import logoDigitalHera from "@/assets/logo-digital-hera.png";
 
 type PageState = "loading" | "welcome" | "quiz" | "complete" | "error";
 
@@ -26,6 +27,7 @@ export default function ExpertQuiz() {
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [currentIdx, setCurrentIdx] = useState(0);
   const [errorMsg, setErrorMsg] = useState("");
+  const [isTyping, setIsTyping] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   // Load onboarding + existing answers
@@ -73,7 +75,7 @@ export default function ExpertQuiz() {
   // Scroll to bottom on new messages
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [currentIdx, pageState]);
+  }, [currentIdx, pageState, isTyping]);
 
   const handleStart = useCallback(async () => {
     if (!onboarding) return;
@@ -103,14 +105,19 @@ export default function ExpertQuiz() {
     const nextIdx = curQIdx + 1;
 
     if (nextIdx >= visible.length) {
-      // All done
       await supabase
         .from("expert_onboardings")
         .update({ status: "completed", completed_at: new Date().toISOString(), current_block: 10 })
         .eq("id", onboarding.id);
       setPageState("complete");
     } else {
-      setCurrentIdx(nextIdx);
+      // Show typing indicator before next question
+      setIsTyping(true);
+      setTimeout(() => {
+        setIsTyping(false);
+        setCurrentIdx(nextIdx);
+      }, 800);
+
       // Update current_block
       const nextBlock = visible[nextIdx]?.block;
       const blockNum = parseInt(nextBlock?.replace("bloco_", "") || "0");
@@ -123,7 +130,7 @@ export default function ExpertQuiz() {
 
   if (pageState === "loading") {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/10 via-background to-secondary/5">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
@@ -131,27 +138,22 @@ export default function ExpertQuiz() {
 
   if (pageState === "error") {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-background gap-4 px-4">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-primary/10 via-background to-secondary/5 gap-4 px-4">
+        <div className="flex justify-center mb-4">
+          <img src={logoDigitalHera} alt="Digital Hera" className="h-12 object-contain" />
+        </div>
         <AlertCircle className="h-12 w-12 text-destructive" />
-        <p className="text-lg text-muted-foreground">{errorMsg}</p>
+        <p className="text-lg text-muted-foreground text-center">{errorMsg}</p>
       </div>
     );
   }
 
   if (pageState === "welcome" && onboarding) {
-    return (
-      <div className="min-h-screen bg-background">
-        <QuizWelcome expertName={onboarding.expert_name} onStart={handleStart} />
-      </div>
-    );
+    return <QuizWelcome expertName={onboarding.expert_name} onStart={handleStart} />;
   }
 
   if (pageState === "complete" && onboarding) {
-    return (
-      <div className="min-h-screen bg-background">
-        <QuizComplete expertName={onboarding.expert_name} />
-      </div>
-    );
+    return <QuizComplete expertName={onboarding.expert_name} />;
   }
 
   // Quiz state
@@ -160,10 +162,15 @@ export default function ExpertQuiz() {
   const currentQuestion = visibleQuestions[currentIdx];
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5 flex flex-col">
       {/* Header */}
-      <div className="sticky top-0 bg-background/95 backdrop-blur border-b px-4 py-3 z-10">
-        <div className="max-w-2xl mx-auto">
+      <div className="sticky top-0 bg-card/95 backdrop-blur-md border-b border-border/50 px-4 py-3 z-10 shadow-sm">
+        <div className="max-w-2xl mx-auto space-y-2">
+          <div className="flex items-center gap-3">
+            <img src={logoDigitalHera} alt="Digital Hera" className="h-7 object-contain" />
+            <div className="h-4 w-px bg-border" />
+            <span className="text-xs text-muted-foreground font-medium">Diagnóstico</span>
+          </div>
           <QuizProgress
             current={currentIdx}
             total={visibleQuestions.length}
@@ -192,8 +199,12 @@ export default function ExpertQuiz() {
             return (
               <div key={q.key}>
                 {showBlockHeader && (
-                  <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mt-6 mb-2">
-                    {q.blockLabel}
+                  <div className="flex items-center gap-2 mt-8 mb-3">
+                    <div className="h-px flex-1 bg-gradient-to-r from-primary/20 to-transparent" />
+                    <span className="text-xs font-semibold text-primary/70 uppercase tracking-wider px-2">
+                      {q.blockLabel}
+                    </span>
+                    <div className="h-px flex-1 bg-gradient-to-l from-primary/20 to-transparent" />
                   </div>
                 )}
                 <QuizChatBubble message={q.label} animate={false} />
@@ -203,24 +214,31 @@ export default function ExpertQuiz() {
           })}
 
           {/* Current question */}
-          {currentQuestion && (
+          {currentQuestion && !isTyping && (
             <div>
               {(currentIdx === 0 || currentQuestion.block !== answeredQuestions[answeredQuestions.length - 1]?.block) && (
-                <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mt-6 mb-2">
-                  {currentQuestion.blockLabel}
+                <div className="flex items-center gap-2 mt-8 mb-3">
+                  <div className="h-px flex-1 bg-gradient-to-r from-primary/20 to-transparent" />
+                  <span className="text-xs font-semibold text-primary/70 uppercase tracking-wider px-2">
+                    {currentQuestion.blockLabel}
+                  </span>
+                  <div className="h-px flex-1 bg-gradient-to-l from-primary/20 to-transparent" />
                 </div>
               )}
               <QuizChatBubble message={currentQuestion.label} />
             </div>
           )}
 
+          {/* Typing indicator */}
+          {isTyping && <QuizChatBubble message="" isTyping animate />}
+
           <div ref={chatEndRef} />
         </div>
       </div>
 
       {/* Input area */}
-      {currentQuestion && (
-        <div className="sticky bottom-0 bg-background/95 backdrop-blur border-t px-4 py-4 z-10">
+      {currentQuestion && !isTyping && (
+        <div className="sticky bottom-0 bg-card/95 backdrop-blur-md border-t border-border/50 px-4 py-4 z-10 shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
           <div className="max-w-2xl mx-auto">
             <QuizInput
               key={currentQuestion.key}
@@ -231,7 +249,7 @@ export default function ExpertQuiz() {
             {!currentQuestion.required && currentQuestion.type !== "single-select" && currentQuestion.type !== "multi-select" && (
               <button
                 onClick={() => handleAnswer(currentQuestion.key, currentQuestion.block, "")}
-                className="text-xs text-muted-foreground mt-2 hover:underline"
+                className="text-xs text-muted-foreground mt-2 hover:text-primary hover:underline transition-colors"
               >
                 Pular →
               </button>
