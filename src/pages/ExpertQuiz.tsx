@@ -46,7 +46,6 @@ export default function ExpertQuiz() {
 
       setOnboarding(ob);
 
-      // Load existing answers
       const { data: resps } = await supabase
         .from("expert_onboarding_responses")
         .select("field_key, value")
@@ -56,7 +55,6 @@ export default function ExpertQuiz() {
       resps?.forEach((r) => { if (r.value) saved[r.field_key] = r.value; });
       setAnswers(saved);
 
-      // Resume position
       const visible = getVisibleQuestions(saved);
       const answeredCount = visible.filter((q) => saved[q.key]).length;
 
@@ -99,13 +97,11 @@ export default function ExpertQuiz() {
     const newAnswers = { ...answers, [key]: value };
     setAnswers(newAnswers);
 
-    // Upsert response
     await supabase.from("expert_onboarding_responses").upsert(
       { onboarding_id: onboarding.id, block_id: blockId, field_key: key, value },
       { onConflict: "onboarding_id,field_key" }
     );
 
-    // Move to next visible question
     const visible = getVisibleQuestions(newAnswers);
     const curQIdx = visible.findIndex((q) => q.key === key);
     const nextIdx = curQIdx + 1;
@@ -119,7 +115,6 @@ export default function ExpertQuiz() {
     } else {
       goToQuestion(nextIdx, "next");
 
-      // Update current_block
       const nextBlock = visible[nextIdx]?.block;
       const blockNum = parseInt(nextBlock?.replace("bloco_", "") || "0");
       await supabase
@@ -137,18 +132,18 @@ export default function ExpertQuiz() {
 
   if (pageState === "loading") {
     return (
-      <div className="min-h-[100dvh] flex items-center justify-center bg-gradient-to-br from-[#7c3aed]/10 via-background to-[#7c3aed]/5">
-        <Loader2 className="h-8 w-8 animate-spin text-[#7c3aed]" />
+      <div className="min-h-[100dvh] flex items-center justify-center bg-gradient-to-br from-[#1a1a2e] via-[#16213e] to-[#1a1a2e]">
+        <Loader2 className="h-8 w-8 animate-spin text-[#c9a84c]" />
       </div>
     );
   }
 
   if (pageState === "error") {
     return (
-      <div className="min-h-[100dvh] flex flex-col items-center justify-center bg-gradient-to-br from-[#7c3aed]/10 via-background to-[#7c3aed]/5 gap-4 px-4">
+      <div className="min-h-[100dvh] flex flex-col items-center justify-center bg-gradient-to-br from-[#1a1a2e] via-[#16213e] to-[#1a1a2e] gap-4 px-4">
         <img src={logoDigitalHera} alt="Digital Hera" className="h-12 object-contain" />
-        <AlertCircle className="h-12 w-12 text-destructive" />
-        <p className="text-lg text-muted-foreground text-center">{errorMsg}</p>
+        <AlertCircle className="h-12 w-12 text-red-400" />
+        <p className="text-lg text-[#9ca3af] text-center">{errorMsg}</p>
       </div>
     );
   }
@@ -165,13 +160,13 @@ export default function ExpertQuiz() {
   if (!currentQuestion) return null;
 
   return (
-    <div className="min-h-[100dvh] bg-gradient-to-br from-[#7c3aed]/5 via-background to-[#7c3aed]/10 flex flex-col">
+    <div className="min-h-[100dvh] bg-gradient-to-br from-[#1a1a2e] via-[#16213e] to-[#1a1a2e] flex flex-col">
       {/* Top bar */}
       <div className="px-4 pt-4 pb-2 z-10">
         <div className="max-w-xl mx-auto">
           <div className="flex items-center justify-between mb-3">
             <img src={logoDigitalHera} alt="Digital Hera" className="h-7 object-contain" />
-            <span className="text-xs text-muted-foreground font-medium">
+            <span className="text-xs text-[#c9a84c]/70 font-medium tracking-wider">
               {currentIdx + 1} / {visibleQuestions.length}
             </span>
           </div>
@@ -183,7 +178,7 @@ export default function ExpertQuiz() {
         </div>
       </div>
 
-      {/* Question area - fullscreen centered */}
+      {/* Question area */}
       <div className="flex-1 flex items-center justify-center px-4">
         <div
           className={`w-full max-w-xl transition-all duration-300 ease-out ${
@@ -206,7 +201,7 @@ export default function ExpertQuiz() {
 
       {/* Footer */}
       <div className="px-4 pb-4 pt-2">
-        <p className="text-center text-[10px] text-muted-foreground/60">
+        <p className="text-center text-[10px] text-[#9ca3af]/40 tracking-wider">
           Powered by Digital Hera
         </p>
       </div>
