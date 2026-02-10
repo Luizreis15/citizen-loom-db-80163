@@ -1,74 +1,73 @@
 
-## Redesign Visual do Quiz -- Mobile-first, Branding Digital Hera, Estilo Typebot
+## Redesign Premium -- Paleta Escura, Dourado e Grafite
 
-O quiz atual esta funcional mas visualmente sem identidade: fundo branco puro, sem logo, sem gradientes, sem personalidade. Vamos transformar todas as telas (Welcome, Quiz, Complete) em uma experiencia bonita, com a marca Digital Hera, mobile-first e visual estilo Typebot.
-
----
-
-### O que muda
-
-**1. Tela de Boas-vindas (QuizWelcome.tsx) -- Redesign completo**
-
-- Fundo com gradiente sutil purple-to-white (cores da marca Digital Hera)
-- Logo da Digital Hera no topo (usando `src/assets/logo-digital-hera.png`)
-- Card centralizado com sombra suave e bordas arredondadas
-- Icone decorativo ou ilustracao acima do titulo
-- Tipografia maior e mais acolhedora no mobile
-- Badges estilizados para "8-12 min" e "Dados protegidos" (com fundo colorido)
-- Checkbox LGPD com melhor espacamento
-- Botao CTA com gradiente purple, maior e mais chamativo
-- Animacao de entrada suave (fade-in + slide-up)
-
-**2. Tela do Quiz (ExpertQuiz.tsx) -- Visual Typebot**
-
-- Header com logo Digital Hera pequeno + barra de progresso estilizada com cores da marca
-- Fundo com gradiente sutil (nao branco puro)
-- Bolhas de chat do "bot" com avatar pequeno (icone ou logo da Digital Hera)
-- Bolhas do usuario com cor primary (purple)
-- Separadores de bloco mais visuais (com icone + linha decorativa)
-- Area de input com card estilizado e sombra
-- Animacoes de digitacao ("...") antes de mostrar a pergunta
-
-**3. Bolhas de Chat (QuizChatBubble.tsx) -- Estilo Typebot**
-
-- Avatar circular ao lado da bolha do bot (logo Digital Hera ou icone roxo)
-- Bolhas com bordas mais suaves e sombra leve
-- Cores mais ricas (muted com tom levemente roxo em vez de cinza puro)
-- Animacao de entrada com slide lateral + fade
-
-**4. Barra de Progresso (QuizProgress.tsx) -- Mais visual**
-
-- Progresso com gradiente purple-to-gold
-- Texto com nome do bloco mais destacado
-- Indicador numerico estilizado
-
-**5. Tela Final (QuizComplete.tsx) -- Celebracao**
-
-- Fundo com gradiente
-- Logo da Digital Hera
-- Icone de sucesso maior e animado
-- Card de confirmacao com borda decorativa
-- Botao de agendamento mais visivel
-
-**6. Input Area (QuizInput.tsx) -- Polish**
-
-- Botoes de selecao com bordas e hover mais coloridos (purple/gold)
-- Botao de envio com gradiente
-- Chips de multi-select mais bonitos
+Transformar o quiz de um visual claro/roxo infantilizado para um design premium escuro, elegante e profissional com tons de dourado e grafite.
 
 ---
 
-### Detalhes tecnicos
+### Nova Paleta de Cores
 
-**Arquivos modificados:**
-- `src/components/expert-quiz/QuizWelcome.tsx` -- redesign com logo, gradiente, card
-- `src/components/expert-quiz/QuizChatBubble.tsx` -- avatar, sombra, animacoes
-- `src/components/expert-quiz/QuizProgress.tsx` -- gradiente, visual melhor
-- `src/components/expert-quiz/QuizComplete.tsx` -- celebracao, logo, gradiente
-- `src/components/expert-quiz/QuizInput.tsx` -- botoes mais bonitos
-- `src/pages/ExpertQuiz.tsx` -- fundo gradiente, header com logo, separadores visuais
+| Elemento | Atual | Novo |
+|---|---|---|
+| Fundo principal | Branco com leve roxo | Grafite escuro (#1a1a2e / #16213e) |
+| Cor de destaque | Roxo #7c3aed | Dourado #c9a84c / #d4af37 |
+| Texto principal | Escuro | Branco/creme claro #f5f0e8 |
+| Texto secundario | Cinza medio | Cinza claro #9ca3af |
+| Bordas/cards | Cinza claro | Grafite medio #2a2a3e com borda dourada sutil |
+| Botoes | Roxo solido | Gradiente dourado com hover elegante |
+| Progresso | Barra roxa | Gradiente dourado |
+| Inputs | Borda cinza | Borda grafite com focus dourado |
 
-**Assets utilizados:**
-- `src/assets/logo-digital-hera.png` (logo ja existente no projeto)
+### Tipografia Premium
 
-**Nenhuma mudanca no banco de dados ou logica** -- apenas visual/CSS/componentes.
+- Remover emojis (sem 👋 e 🎉)
+- Usar font-weight mais leve nos titulos (semibold em vez de bold)
+- Tracking mais aberto (letter-spacing) nos labels e subtitulos
+- Textos em caixa alta nos labels de bloco com espacamento elegante
+
+---
+
+### Arquivos modificados (apenas visual, sem logica)
+
+**1. `src/pages/ExpertQuiz.tsx`**
+- Fundo: `bg-[#1a1a2e]` com gradiente sutil para `#16213e`
+- Spinner loading: dourado em vez de roxo
+- Tela de erro: fundo escuro, texto claro
+- Header: logo com fundo escuro, contador em dourado
+- Textos: cor `text-white` / `text-gray-400`
+
+**2. `src/components/expert-quiz/QuizWelcome.tsx`**
+- Fundo escuro com gradiente grafite
+- Card com `bg-[#2a2a3e]/80` backdrop-blur e borda dourada sutil
+- Titulo sem emoji, tipografia elegante (tracking wide, semibold)
+- Badges com fundo dourado/grafite em vez de roxo/verde
+- Checkbox LGPD com accent dourado
+- Botao CTA com gradiente dourado `from-[#c9a84c] to-[#d4af37]`
+- Texto em tons claros/creme
+
+**3. `src/components/expert-quiz/QuizQuestion.tsx`**
+- Numero da questao: fundo dourado sutil em vez de roxo
+- Label do bloco: dourado com tracking wide
+- Opcoes de selecao: borda grafite, hover com borda dourada, selecionado com fundo dourado
+- Letras (A, B, C): borda dourada quando selecionado
+- Inputs de texto: fundo transparente, borda grafite, focus dourado
+- Botoes OK: gradiente dourado
+- Links Voltar/Pular: texto cinza claro, hover dourado
+- Textos brancos/creme
+
+**4. `src/components/expert-quiz/QuizProgress.tsx`**
+- Barra de fundo: grafite escuro
+- Preenchimento: gradiente dourado `from-[#c9a84c] to-[#d4af37]`
+
+**5. `src/components/expert-quiz/QuizComplete.tsx`**
+- Fundo escuro grafite
+- Icone de sucesso: dourado em vez de verde
+- Titulo sem emoji, tipografia premium
+- Botao de agendamento: borda dourada
+- Texto creme/branco
+
+---
+
+### Resultado esperado
+
+Uma experiencia visual sofisticada e profissional: fundo escuro grafite, acentos dourados, tipografia limpa sem emojis, bordas sutis, gradientes elegantes -- transmitindo premium e confianca.
