@@ -419,6 +419,109 @@ export type Database = {
           },
         ]
       }
+      expert_onboarding_responses: {
+        Row: {
+          block_id: string
+          created_at: string
+          field_key: string
+          id: string
+          onboarding_id: string
+          updated_at: string
+          value: string | null
+        }
+        Insert: {
+          block_id: string
+          created_at?: string
+          field_key: string
+          id?: string
+          onboarding_id: string
+          updated_at?: string
+          value?: string | null
+        }
+        Update: {
+          block_id?: string
+          created_at?: string
+          field_key?: string
+          id?: string
+          onboarding_id?: string
+          updated_at?: string
+          value?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expert_onboarding_responses_onboarding_id_fkey"
+            columns: ["onboarding_id"]
+            isOneToOne: false
+            referencedRelation: "expert_onboardings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expert_onboardings: {
+        Row: {
+          completed_at: string | null
+          consent_accepted: boolean
+          consent_at: string | null
+          created_at: string
+          created_by: string | null
+          current_block: number
+          expert_email: string
+          expert_name: string
+          expert_whatsapp: string | null
+          expires_at: string
+          id: string
+          internal_notes: string | null
+          project_name: string | null
+          status: string
+          token: string
+          updated_at: string
+        }
+        Insert: {
+          completed_at?: string | null
+          consent_accepted?: boolean
+          consent_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          current_block?: number
+          expert_email: string
+          expert_name: string
+          expert_whatsapp?: string | null
+          expires_at: string
+          id?: string
+          internal_notes?: string | null
+          project_name?: string | null
+          status?: string
+          token: string
+          updated_at?: string
+        }
+        Update: {
+          completed_at?: string | null
+          consent_accepted?: boolean
+          consent_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          current_block?: number
+          expert_email?: string
+          expert_name?: string
+          expert_whatsapp?: string | null
+          expires_at?: string
+          id?: string
+          internal_notes?: string | null
+          project_name?: string | null
+          status?: string
+          token?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expert_onboardings_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       financial_transactions: {
         Row: {
           amount: number
@@ -1229,6 +1332,10 @@ export type Database = {
       }
       has_role: {
         Args: { _role_name: string; _user_id: string }
+        Returns: boolean
+      }
+      is_valid_expert_onboarding: {
+        Args: { _onboarding_id: string }
         Returns: boolean
       }
       sync_client_profiles: { Args: never; Returns: undefined }

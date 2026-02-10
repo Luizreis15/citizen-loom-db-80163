@@ -43,6 +43,7 @@ import CollaboratorTasks from "./pages/CollaboratorTasks";
 import CollaboratorTaskDetail from "./pages/CollaboratorTaskDetail";
 import CollaboratorProfile from "./pages/CollaboratorProfile";
 import NotFound from "./pages/NotFound";
+import ExpertQuiz from "./pages/ExpertQuiz";
 import { AuthLayout } from "./components/AuthLayout";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { ProtectedRoute } from "./components/ProtectedRoute";
@@ -70,6 +71,7 @@ const App = () => {
               <Route path="/ativar-conta" element={<FirstAccess />} />
               <Route path="/ativar-colaborador" element={<FirstAccessCollaborator />} />
               <Route path="/trocar-senha" element={<ChangePasswordRequired />} />
+              <Route path="/quiz/:token" element={<ExpertQuiz />} />
               
               <Route element={<AuthLayout />}>
                 {/* Admin/Owner Routes */}
