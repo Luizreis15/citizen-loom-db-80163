@@ -23,7 +23,7 @@ export function QuizWelcome({ expertName, onStart }: QuizWelcomeProps) {
         {/* Content */}
         <div className="space-y-8">
           <div className="space-y-3">
-            <h1 className="text-3xl md:text-4xl font-semibold text-[#f5f0e8] tracking-tight">
+            <h1 className="text-3xl md:text-4xl font-medium text-[#f5f0e8]" style={{ fontFamily: "'Playfair Display', serif" }}>
               Olá, {expertName}
             </h1>
             <p className="text-[#9ca3af] text-base md:text-lg leading-relaxed">

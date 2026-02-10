@@ -47,7 +47,7 @@ export function QuizQuestion({ question, questionNumber, onAnswer, onBack, defau
           <span className="flex-shrink-0 flex items-center justify-center h-8 w-8 rounded-lg bg-[#c9a84c]/10 text-[#c9a84c] text-sm font-semibold">
             {questionNumber}
           </span>
-          <h2 className="text-xl md:text-2xl font-semibold text-[#f5f0e8] leading-tight pt-0.5 tracking-tight">
+          <h2 className="text-xl md:text-2xl font-medium text-[#f5f0e8] leading-tight pt-0.5" style={{ fontFamily: "'Playfair Display', serif" }}>
             {question.label}
           </h2>
         </div>
