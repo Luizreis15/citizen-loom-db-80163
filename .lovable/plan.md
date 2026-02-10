@@ -1,55 +1,49 @@
 
 
-## Painel Admin para Quiz de Experts
+## Envio Automatico de Email com Link do Quiz
 
-Criar a rota `/admin/expert-quiz` com duas paginas: listagem de quizzes e visualizacao de respostas, seguindo o padrao existente em `AdminOnboarding.tsx` e `AdminOnboardingDetail.tsx`.
+Quando o admin criar um novo quiz no painel, o sistema envia automaticamente um email premium para o expert com o link do questionario.
 
 ---
 
 ### Arquivos a criar
 
-**1. `src/pages/admin/AdminExpertQuiz.tsx`** -- Pagina de listagem
+**1. `supabase/functions/send-expert-quiz-invite/index.ts`** -- Edge function de envio
 
-- Buscar todos os registros de `expert_onboardings` (ordenados por `created_at DESC`)
-- Cards de estatisticas: Criados, Em Progresso, Concluidos, Total
-- Filtros: busca por nome/email e filtro por status (`created`, `in_progress`, `completed`)
-- Tabela com colunas: Nome do Expert, Email, Projeto, Status (badge), Progresso (current_block/10), Data, Acoes
-- Acoes: Visualizar respostas (link para detail), Copiar link do quiz, Excluir
-- Botao "Novo Quiz" para criar onboarding de expert (dialog com campos: nome, email, whatsapp, nome do projeto, notas internas, dias para expirar)
-- Ao criar, gerar token UUID, calcular expires_at, inserir na tabela
+- Recebe: `expert_name`, `expert_email`, `quiz_link`, `project_name` (opcional), `expires_in_days`
+- Usa Resend com `from: "Digital Hera <noreply@digitalhera.com.br>"`
+- Email HTML premium com paleta escura/dourada matching o design do quiz:
+  - Header com gradiente grafite e logo Digital Hera
+  - Saudacao personalizada com nome do expert
+  - Texto explicando o diagnostico digital
+  - Botao CTA dourado com link do quiz
+  - Info de validade do link
+  - Footer elegante
+- CORS headers padrao
+- Secrets necessarios: `RESEND_API_KEY` (ja configurado)
 
-**2. `src/pages/admin/AdminExpertQuizDetail.tsx`** -- Pagina de detalhes/respostas
+**2. `supabase/config.toml`** -- Adicionar configuracao
 
-- Buscar o `expert_onboarding` por ID + todas as `expert_onboarding_responses` associadas
-- Header com dados do expert (nome, email, whatsapp, projeto, status, datas)
-- Agrupar respostas por bloco usando `QUIZ_BLOCKS` do `quizSchema.ts`
-- Para cada bloco, listar as perguntas com label e valor respondido
-- Perguntas sem resposta marcadas como "Pendente"
-- Barra de progresso por bloco
-- Botao "Voltar" para `/admin/expert-quiz`
+- Adicionar `[functions.send-expert-quiz-invite]` com `verify_jwt = true`
 
 ---
 
 ### Arquivos a modificar
 
-**3. `src/components/AppSidebar.tsx`**
-- Adicionar item de menu "Quiz Expert" com url `/admin/expert-quiz` e icone `FileQuestion` (ou `Sparkles`)
+**3. `src/pages/admin/AdminExpertQuiz.tsx`** -- Chamar edge function apos criar quiz
 
-**4. `src/App.tsx`**
-- Importar `AdminExpertQuiz` e `AdminExpertQuizDetail`
-- Adicionar rotas protegidas (Owner/Admin):
-  - `/admin/expert-quiz` -> `AdminExpertQuiz`
-  - `/admin/expert-quiz/:id` -> `AdminExpertQuizDetail`
+- No `createMutation`, apos inserir na tabela com sucesso, invocar a edge function `send-expert-quiz-invite` passando nome, email, link do quiz e dias de validade
+- Atualizar toast de sucesso para "Quiz criado e email enviado!"
+- Em caso de erro no envio do email (mas quiz criado), mostrar toast informando que o quiz foi criado mas o email falhou, com opcao de copiar o link manualmente
+- Adicionar botao de reenvio de email na tabela (icone Mail) para quizzes ja criados
 
 ---
 
 ### Detalhes tecnicos
 
-- Reutilizar `QUIZ_QUESTIONS` e `QUIZ_BLOCKS` do `quizSchema.ts` para mapear field_key -> label e agrupar por bloco
-- Status badges: `created` = cinza, `in_progress` = amarelo, `completed` = verde
-- Progresso calculado como `current_block / 10 * 100`
-- Para criar novo quiz, gerar token com `crypto.randomUUID()` no frontend
-- O link do quiz sera `{window.location.origin}/quiz/{token}`
-- Dialog de criacao usa campos simples (Input + Textarea)
-- Nenhuma migracao de banco necessaria -- tabelas `expert_onboardings` e `expert_onboarding_responses` ja existem com RLS adequada
+- A edge function segue o mesmo padrao de `send-welcome-client` (Resend + CORS + validacao)
+- O link do quiz e construido como `{APP_URL}/quiz/{token}` usando o secret APP_URL
+- O email HTML usa inline styles com a paleta premium (grafite #1a1a2e, dourado #c9a84c, creme #f5f0e8)
+- Nenhuma migracao de banco necessaria
+- O JWT do admin autenticado e usado para autorizar a chamada da edge function
 
