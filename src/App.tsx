@@ -37,6 +37,8 @@ import TicketsBoard from "./pages/admin/TicketsBoard";
 import AdminTaskReview from "./pages/admin/AdminTaskReview";
 import AdminOnboarding from "./pages/admin/AdminOnboarding";
 import AdminOnboardingDetail from "./pages/admin/AdminOnboardingDetail";
+import AdminExpertQuiz from "./pages/admin/AdminExpertQuiz";
+import AdminExpertQuizDetail from "./pages/admin/AdminExpertQuizDetail";
 import ClientOnboarding from "./pages/ClientOnboarding";
 import CollaboratorDashboard from "./pages/CollaboratorDashboard";
 import CollaboratorTasks from "./pages/CollaboratorTasks";
@@ -133,6 +135,16 @@ const App = () => {
                 <Route path="/admin/onboarding/:id" element={
                   <ProtectedRoute allowedRoles={["Owner", "Admin"]}>
                     <AdminOnboardingDetail />
+                  </ProtectedRoute>
+                } />
+                <Route path="/admin/expert-quiz" element={
+                  <ProtectedRoute allowedRoles={["Owner", "Admin"]}>
+                    <AdminExpertQuiz />
+                  </ProtectedRoute>
+                } />
+                <Route path="/admin/expert-quiz/:id" element={
+                  <ProtectedRoute allowedRoles={["Owner", "Admin"]}>
+                    <AdminExpertQuizDetail />
                   </ProtectedRoute>
                 } />
 
