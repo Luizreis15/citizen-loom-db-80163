@@ -1,10 +1,9 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { QuizWelcome } from "@/components/expert-quiz/QuizWelcome";
 import { QuizComplete } from "@/components/expert-quiz/QuizComplete";
-import { QuizChatBubble } from "@/components/expert-quiz/QuizChatBubble";
-import { QuizInput } from "@/components/expert-quiz/QuizInput";
+import { QuizQuestion as QuizQuestionComponent } from "@/components/expert-quiz/QuizQuestion";
 import { QuizProgress } from "@/components/expert-quiz/QuizProgress";
 import { getVisibleQuestions } from "@/components/expert-quiz/quizSchema";
 import { Loader2, AlertCircle } from "lucide-react";
@@ -27,8 +26,8 @@ export default function ExpertQuiz() {
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [currentIdx, setCurrentIdx] = useState(0);
   const [errorMsg, setErrorMsg] = useState("");
-  const [isTyping, setIsTyping] = useState(false);
-  const chatEndRef = useRef<HTMLDivElement>(null);
+  const [direction, setDirection] = useState<"next" | "prev">("next");
+  const [isAnimating, setIsAnimating] = useState(false);
 
   // Load onboarding + existing answers
   useEffect(() => {
@@ -62,7 +61,7 @@ export default function ExpertQuiz() {
       const answeredCount = visible.filter((q) => saved[q.key]).length;
 
       if (ob.consent_accepted && answeredCount > 0) {
-        setCurrentIdx(Math.min(answeredCount, visible.length));
+        setCurrentIdx(Math.min(answeredCount, visible.length - 1));
         setPageState("quiz");
       } else if (ob.consent_accepted) {
         setPageState("quiz");
@@ -71,11 +70,6 @@ export default function ExpertQuiz() {
       }
     })();
   }, [token]);
-
-  // Scroll to bottom on new messages
-  useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [currentIdx, pageState, isTyping]);
 
   const handleStart = useCallback(async () => {
     if (!onboarding) return;
@@ -86,6 +80,18 @@ export default function ExpertQuiz() {
     setOnboarding((prev) => prev ? { ...prev, consent_accepted: true, status: "in_progress" } : prev);
     setPageState("quiz");
   }, [onboarding]);
+
+  const visibleQuestions = getVisibleQuestions(answers);
+
+  const goToQuestion = useCallback((nextIdx: number, dir: "next" | "prev") => {
+    if (isAnimating) return;
+    setDirection(dir);
+    setIsAnimating(true);
+    setTimeout(() => {
+      setCurrentIdx(nextIdx);
+      setIsAnimating(false);
+    }, 300);
+  }, [isAnimating]);
 
   const handleAnswer = useCallback(async (key: string, blockId: string, value: string) => {
     if (!onboarding) return;
@@ -111,12 +117,7 @@ export default function ExpertQuiz() {
         .eq("id", onboarding.id);
       setPageState("complete");
     } else {
-      // Show typing indicator before next question
-      setIsTyping(true);
-      setTimeout(() => {
-        setIsTyping(false);
-        setCurrentIdx(nextIdx);
-      }, 800);
+      goToQuestion(nextIdx, "next");
 
       // Update current_block
       const nextBlock = visible[nextIdx]?.block;
@@ -126,22 +127,26 @@ export default function ExpertQuiz() {
         .update({ current_block: blockNum })
         .eq("id", onboarding.id);
     }
-  }, [onboarding, answers]);
+  }, [onboarding, answers, goToQuestion]);
+
+  const handleBack = useCallback(() => {
+    if (currentIdx > 0) {
+      goToQuestion(currentIdx - 1, "prev");
+    }
+  }, [currentIdx, goToQuestion]);
 
   if (pageState === "loading") {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/10 via-background to-secondary/5">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="min-h-[100dvh] flex items-center justify-center bg-gradient-to-br from-[#7c3aed]/10 via-background to-[#7c3aed]/5">
+        <Loader2 className="h-8 w-8 animate-spin text-[#7c3aed]" />
       </div>
     );
   }
 
   if (pageState === "error") {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-primary/10 via-background to-secondary/5 gap-4 px-4">
-        <div className="flex justify-center mb-4">
-          <img src={logoDigitalHera} alt="Digital Hera" className="h-12 object-contain" />
-        </div>
+      <div className="min-h-[100dvh] flex flex-col items-center justify-center bg-gradient-to-br from-[#7c3aed]/10 via-background to-[#7c3aed]/5 gap-4 px-4">
+        <img src={logoDigitalHera} alt="Digital Hera" className="h-12 object-contain" />
         <AlertCircle className="h-12 w-12 text-destructive" />
         <p className="text-lg text-muted-foreground text-center">{errorMsg}</p>
       </div>
@@ -156,107 +161,55 @@ export default function ExpertQuiz() {
     return <QuizComplete expertName={onboarding.expert_name} />;
   }
 
-  // Quiz state
-  const visibleQuestions = getVisibleQuestions(answers);
-  const answeredQuestions = visibleQuestions.slice(0, currentIdx);
   const currentQuestion = visibleQuestions[currentIdx];
+  if (!currentQuestion) return null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5 flex flex-col">
-      {/* Header */}
-      <div className="sticky top-0 bg-card/95 backdrop-blur-md border-b border-border/50 px-4 py-3 z-10 shadow-sm">
-        <div className="max-w-2xl mx-auto space-y-2">
-          <div className="flex items-center gap-3">
+    <div className="min-h-[100dvh] bg-gradient-to-br from-[#7c3aed]/5 via-background to-[#7c3aed]/10 flex flex-col">
+      {/* Top bar */}
+      <div className="px-4 pt-4 pb-2 z-10">
+        <div className="max-w-xl mx-auto">
+          <div className="flex items-center justify-between mb-3">
             <img src={logoDigitalHera} alt="Digital Hera" className="h-7 object-contain" />
-            <div className="h-4 w-px bg-border" />
-            <span className="text-xs text-muted-foreground font-medium">Diagnóstico</span>
+            <span className="text-xs text-muted-foreground font-medium">
+              {currentIdx + 1} / {visibleQuestions.length}
+            </span>
           </div>
           <QuizProgress
             current={currentIdx}
             total={visibleQuestions.length}
-            blockLabel={currentQuestion?.blockLabel}
+            blockLabel={currentQuestion.blockLabel}
           />
         </div>
       </div>
 
-      {/* Chat area */}
-      <div className="flex-1 overflow-y-auto">
-        <div className="max-w-2xl mx-auto px-4 py-6 space-y-1">
-          {/* Intro message */}
-          <QuizChatBubble message={`Ótimo, ${onboarding?.expert_name}! Vamos começar. 🚀`} animate={false} />
-
-          {/* Answered questions */}
-          {answeredQuestions.map((q, i) => {
-            const prevBlock = i > 0 ? answeredQuestions[i - 1]?.block : null;
-            const showBlockHeader = q.block !== prevBlock;
-            const answerVal = answers[q.key] || "";
-            let displayAnswer = answerVal;
-            try {
-              const parsed = JSON.parse(answerVal);
-              if (Array.isArray(parsed)) displayAnswer = parsed.join(", ");
-            } catch { /* not json */ }
-
-            return (
-              <div key={q.key}>
-                {showBlockHeader && (
-                  <div className="flex items-center gap-2 mt-8 mb-3">
-                    <div className="h-px flex-1 bg-gradient-to-r from-primary/20 to-transparent" />
-                    <span className="text-xs font-semibold text-primary/70 uppercase tracking-wider px-2">
-                      {q.blockLabel}
-                    </span>
-                    <div className="h-px flex-1 bg-gradient-to-l from-primary/20 to-transparent" />
-                  </div>
-                )}
-                <QuizChatBubble message={q.label} animate={false} />
-                {answerVal && <QuizChatBubble message={displayAnswer} isUser animate={false} />}
-              </div>
-            );
-          })}
-
-          {/* Current question */}
-          {currentQuestion && !isTyping && (
-            <div>
-              {(currentIdx === 0 || currentQuestion.block !== answeredQuestions[answeredQuestions.length - 1]?.block) && (
-                <div className="flex items-center gap-2 mt-8 mb-3">
-                  <div className="h-px flex-1 bg-gradient-to-r from-primary/20 to-transparent" />
-                  <span className="text-xs font-semibold text-primary/70 uppercase tracking-wider px-2">
-                    {currentQuestion.blockLabel}
-                  </span>
-                  <div className="h-px flex-1 bg-gradient-to-l from-primary/20 to-transparent" />
-                </div>
-              )}
-              <QuizChatBubble message={currentQuestion.label} />
-            </div>
-          )}
-
-          {/* Typing indicator */}
-          {isTyping && <QuizChatBubble message="" isTyping animate />}
-
-          <div ref={chatEndRef} />
+      {/* Question area - fullscreen centered */}
+      <div className="flex-1 flex items-center justify-center px-4">
+        <div
+          className={`w-full max-w-xl transition-all duration-300 ease-out ${
+            isAnimating
+              ? direction === "next"
+                ? "opacity-0 translate-y-8"
+                : "opacity-0 -translate-y-8"
+              : "opacity-100 translate-y-0"
+          }`}
+        >
+          <QuizQuestionComponent
+            question={currentQuestion}
+            questionNumber={currentIdx + 1}
+            defaultValue={answers[currentQuestion.key]}
+            onAnswer={(val) => handleAnswer(currentQuestion.key, currentQuestion.block, val)}
+            onBack={currentIdx > 0 ? handleBack : undefined}
+          />
         </div>
       </div>
 
-      {/* Input area */}
-      {currentQuestion && !isTyping && (
-        <div className="sticky bottom-0 bg-card/95 backdrop-blur-md border-t border-border/50 px-4 py-4 z-10 shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
-          <div className="max-w-2xl mx-auto">
-            <QuizInput
-              key={currentQuestion.key}
-              question={currentQuestion}
-              defaultValue={answers[currentQuestion.key]}
-              onAnswer={(val) => handleAnswer(currentQuestion.key, currentQuestion.block, val)}
-            />
-            {!currentQuestion.required && currentQuestion.type !== "single-select" && currentQuestion.type !== "multi-select" && (
-              <button
-                onClick={() => handleAnswer(currentQuestion.key, currentQuestion.block, "")}
-                className="text-xs text-muted-foreground mt-2 hover:text-primary hover:underline transition-colors"
-              >
-                Pular →
-              </button>
-            )}
-          </div>
-        </div>
-      )}
+      {/* Footer */}
+      <div className="px-4 pb-4 pt-2">
+        <p className="text-center text-[10px] text-muted-foreground/60">
+          Powered by Digital Hera
+        </p>
+      </div>
     </div>
   );
 }
