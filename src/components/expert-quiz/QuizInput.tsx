@@ -32,7 +32,10 @@ export function QuizInput({ question, onAnswer, defaultValue }: QuizInputProps) 
             key={option}
             variant={selectedOptions.includes(option) ? "default" : "outline"}
             size="sm"
-            className="rounded-full text-sm"
+            className={cn(
+              "rounded-full text-sm transition-all",
+              !selectedOptions.includes(option) && "hover:border-primary/50 hover:bg-primary/5 hover:text-primary"
+            )}
             onClick={() => onAnswer(option)}
           >
             {option}
@@ -58,7 +61,11 @@ export function QuizInput({ question, onAnswer, defaultValue }: QuizInputProps) 
                 key={option}
                 variant={active ? "default" : "outline"}
                 size="sm"
-                className={cn("rounded-full text-sm", active && "gap-1")}
+                className={cn(
+                  "rounded-full text-sm transition-all",
+                  active && "gap-1",
+                  !active && "hover:border-primary/50 hover:bg-primary/5 hover:text-primary"
+                )}
                 onClick={() => toggle(option)}
               >
                 {active && <Check className="h-3 w-3" />}
@@ -68,7 +75,11 @@ export function QuizInput({ question, onAnswer, defaultValue }: QuizInputProps) 
           })}
         </div>
         {selectedOptions.length > 0 && (
-          <Button size="sm" onClick={() => onAnswer(JSON.stringify(selectedOptions))} className="gap-1">
+          <Button
+            size="sm"
+            onClick={() => onAnswer(JSON.stringify(selectedOptions))}
+            className="gap-1 rounded-full bg-gradient-to-r from-primary to-primary/80 shadow-md shadow-primary/20"
+          >
             <Send className="h-3 w-3" /> Confirmar
           </Button>
         )}
@@ -83,7 +94,7 @@ export function QuizInput({ question, onAnswer, defaultValue }: QuizInputProps) 
           value={textValue}
           onChange={(e) => setTextValue(e.target.value)}
           placeholder={question.placeholder || "Digite sua resposta..."}
-          className="min-h-[80px] flex-1 resize-none"
+          className="min-h-[80px] flex-1 resize-none rounded-xl border-border/60 focus:border-primary/50"
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey && textValue.trim()) {
               e.preventDefault();
@@ -95,7 +106,7 @@ export function QuizInput({ question, onAnswer, defaultValue }: QuizInputProps) 
           size="icon"
           onClick={() => textValue.trim() && onAnswer(textValue.trim())}
           disabled={!textValue.trim()}
-          className="self-end"
+          className="self-end rounded-xl bg-gradient-to-r from-primary to-primary/80 shadow-md shadow-primary/20"
         >
           <Send className="h-4 w-4" />
         </Button>
@@ -111,7 +122,7 @@ export function QuizInput({ question, onAnswer, defaultValue }: QuizInputProps) 
         value={textValue}
         onChange={(e) => setTextValue(e.target.value)}
         placeholder={question.placeholder || "Digite sua resposta..."}
-        className="flex-1"
+        className="flex-1 rounded-xl border-border/60 focus:border-primary/50"
         onKeyDown={(e) => {
           if (e.key === "Enter" && (textValue.trim() || !question.required)) {
             e.preventDefault();
@@ -123,6 +134,7 @@ export function QuizInput({ question, onAnswer, defaultValue }: QuizInputProps) 
         size="icon"
         onClick={() => onAnswer(textValue.trim())}
         disabled={question.required && !textValue.trim()}
+        className="rounded-xl bg-gradient-to-r from-primary to-primary/80 shadow-md shadow-primary/20"
       >
         <Send className="h-4 w-4" />
       </Button>
