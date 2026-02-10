@@ -50,3 +50,6 @@ verify_jwt = true
 
 [functions.onboarding-decrypt-sensitive]
 verify_jwt = true
+
+[functions.send-expert-quiz-invite]
+verify_jwt = false

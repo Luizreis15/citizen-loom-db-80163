@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Plus, Eye, Copy, Trash2, Search, Sparkles } from "lucide-react";
+import { Plus, Eye, Copy, Trash2, Search, Sparkles, Mail, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -51,9 +51,30 @@ export default function AdminExpertQuiz() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [resendingId, setResendingId] = useState<string | null>(null);
   const [form, setForm] = useState({
     expert_name: "", expert_email: "", expert_whatsapp: "", project_name: "", internal_notes: "", days_to_expire: "7",
   });
+
+  const sendQuizEmail = async (expertName: string, expertEmail: string, token: string, projectName: string | null, daysToExpire: number) => {
+    const appUrl = window.location.origin;
+    const quizLink = `${appUrl}/quiz/${token}`;
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData?.session?.access_token;
+    if (!accessToken) throw new Error("Sessão expirada");
+
+    const res = await supabase.functions.invoke("send-expert-quiz-invite", {
+      body: {
+        expert_name: expertName,
+        expert_email: expertEmail,
+        quiz_link: quizLink,
+        project_name: projectName || undefined,
+        expires_in_days: daysToExpire,
+      },
+    });
+    if (res.error) throw res.error;
+    return res.data;
+  };
 
   const { data: onboardings = [], isLoading } = useQuery({
     queryKey: ["expert-onboardings"],
@@ -82,15 +103,41 @@ export default function AdminExpertQuiz() {
         expires_at,
       });
       if (error) throw error;
+      // Send email
+      try {
+        await sendQuizEmail(form.expert_name, form.expert_email, token, form.project_name || null, parseInt(form.days_to_expire) || 7);
+      } catch (emailErr) {
+        console.error("Email send failed:", emailErr);
+        // Quiz created but email failed - we'll handle in onSuccess
+        return { emailFailed: true, token };
+      }
+      return { emailFailed: false, token };
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["expert-onboardings"] });
       setDialogOpen(false);
       setForm({ expert_name: "", expert_email: "", expert_whatsapp: "", project_name: "", internal_notes: "", days_to_expire: "7" });
-      toast({ title: "Quiz criado com sucesso!" });
+      if (result?.emailFailed) {
+        toast({ title: "Quiz criado, mas o email falhou", description: "Copie o link manualmente para enviar ao expert.", variant: "destructive" });
+      } else {
+        toast({ title: "Quiz criado e email enviado! ✉️" });
+      }
     },
     onError: () => toast({ title: "Erro ao criar quiz", variant: "destructive" }),
   });
+
+  const handleResendEmail = async (o: ExpertOnboarding) => {
+    setResendingId(o.id);
+    try {
+      const daysLeft = Math.max(1, Math.ceil((new Date(o.expires_at).getTime() - Date.now()) / 86400000));
+      await sendQuizEmail(o.expert_name, o.expert_email, o.token, o.project_name, daysLeft);
+      toast({ title: "Email reenviado! ✉️" });
+    } catch {
+      toast({ title: "Erro ao reenviar email", variant: "destructive" });
+    } finally {
+      setResendingId(null);
+    }
+  };
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -211,6 +258,9 @@ export default function AdminExpertQuiz() {
                         <div className="flex gap-1">
                           <Button variant="ghost" size="icon" asChild><Link to={`/admin/expert-quiz/${o.id}`}><Eye className="h-4 w-4" /></Link></Button>
                           <Button variant="ghost" size="icon" onClick={() => copyLink(o.token)}><Copy className="h-4 w-4" /></Button>
+                          <Button variant="ghost" size="icon" onClick={() => handleResendEmail(o)} disabled={resendingId === o.id}>
+                            {resendingId === o.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+                          </Button>
                           <Button variant="ghost" size="icon" onClick={() => deleteMutation.mutate(o.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                         </div>
                       </TableCell>
