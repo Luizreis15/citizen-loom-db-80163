@@ -1,73 +1,55 @@
 
-## Redesign Premium -- Paleta Escura, Dourado e Grafite
 
-Transformar o quiz de um visual claro/roxo infantilizado para um design premium escuro, elegante e profissional com tons de dourado e grafite.
+## Painel Admin para Quiz de Experts
 
----
-
-### Nova Paleta de Cores
-
-| Elemento | Atual | Novo |
-|---|---|---|
-| Fundo principal | Branco com leve roxo | Grafite escuro (#1a1a2e / #16213e) |
-| Cor de destaque | Roxo #7c3aed | Dourado #c9a84c / #d4af37 |
-| Texto principal | Escuro | Branco/creme claro #f5f0e8 |
-| Texto secundario | Cinza medio | Cinza claro #9ca3af |
-| Bordas/cards | Cinza claro | Grafite medio #2a2a3e com borda dourada sutil |
-| Botoes | Roxo solido | Gradiente dourado com hover elegante |
-| Progresso | Barra roxa | Gradiente dourado |
-| Inputs | Borda cinza | Borda grafite com focus dourado |
-
-### Tipografia Premium
-
-- Remover emojis (sem 👋 e 🎉)
-- Usar font-weight mais leve nos titulos (semibold em vez de bold)
-- Tracking mais aberto (letter-spacing) nos labels e subtitulos
-- Textos em caixa alta nos labels de bloco com espacamento elegante
+Criar a rota `/admin/expert-quiz` com duas paginas: listagem de quizzes e visualizacao de respostas, seguindo o padrao existente em `AdminOnboarding.tsx` e `AdminOnboardingDetail.tsx`.
 
 ---
 
-### Arquivos modificados (apenas visual, sem logica)
+### Arquivos a criar
 
-**1. `src/pages/ExpertQuiz.tsx`**
-- Fundo: `bg-[#1a1a2e]` com gradiente sutil para `#16213e`
-- Spinner loading: dourado em vez de roxo
-- Tela de erro: fundo escuro, texto claro
-- Header: logo com fundo escuro, contador em dourado
-- Textos: cor `text-white` / `text-gray-400`
+**1. `src/pages/admin/AdminExpertQuiz.tsx`** -- Pagina de listagem
 
-**2. `src/components/expert-quiz/QuizWelcome.tsx`**
-- Fundo escuro com gradiente grafite
-- Card com `bg-[#2a2a3e]/80` backdrop-blur e borda dourada sutil
-- Titulo sem emoji, tipografia elegante (tracking wide, semibold)
-- Badges com fundo dourado/grafite em vez de roxo/verde
-- Checkbox LGPD com accent dourado
-- Botao CTA com gradiente dourado `from-[#c9a84c] to-[#d4af37]`
-- Texto em tons claros/creme
+- Buscar todos os registros de `expert_onboardings` (ordenados por `created_at DESC`)
+- Cards de estatisticas: Criados, Em Progresso, Concluidos, Total
+- Filtros: busca por nome/email e filtro por status (`created`, `in_progress`, `completed`)
+- Tabela com colunas: Nome do Expert, Email, Projeto, Status (badge), Progresso (current_block/10), Data, Acoes
+- Acoes: Visualizar respostas (link para detail), Copiar link do quiz, Excluir
+- Botao "Novo Quiz" para criar onboarding de expert (dialog com campos: nome, email, whatsapp, nome do projeto, notas internas, dias para expirar)
+- Ao criar, gerar token UUID, calcular expires_at, inserir na tabela
 
-**3. `src/components/expert-quiz/QuizQuestion.tsx`**
-- Numero da questao: fundo dourado sutil em vez de roxo
-- Label do bloco: dourado com tracking wide
-- Opcoes de selecao: borda grafite, hover com borda dourada, selecionado com fundo dourado
-- Letras (A, B, C): borda dourada quando selecionado
-- Inputs de texto: fundo transparente, borda grafite, focus dourado
-- Botoes OK: gradiente dourado
-- Links Voltar/Pular: texto cinza claro, hover dourado
-- Textos brancos/creme
+**2. `src/pages/admin/AdminExpertQuizDetail.tsx`** -- Pagina de detalhes/respostas
 
-**4. `src/components/expert-quiz/QuizProgress.tsx`**
-- Barra de fundo: grafite escuro
-- Preenchimento: gradiente dourado `from-[#c9a84c] to-[#d4af37]`
-
-**5. `src/components/expert-quiz/QuizComplete.tsx`**
-- Fundo escuro grafite
-- Icone de sucesso: dourado em vez de verde
-- Titulo sem emoji, tipografia premium
-- Botao de agendamento: borda dourada
-- Texto creme/branco
+- Buscar o `expert_onboarding` por ID + todas as `expert_onboarding_responses` associadas
+- Header com dados do expert (nome, email, whatsapp, projeto, status, datas)
+- Agrupar respostas por bloco usando `QUIZ_BLOCKS` do `quizSchema.ts`
+- Para cada bloco, listar as perguntas com label e valor respondido
+- Perguntas sem resposta marcadas como "Pendente"
+- Barra de progresso por bloco
+- Botao "Voltar" para `/admin/expert-quiz`
 
 ---
 
-### Resultado esperado
+### Arquivos a modificar
 
-Uma experiencia visual sofisticada e profissional: fundo escuro grafite, acentos dourados, tipografia limpa sem emojis, bordas sutis, gradientes elegantes -- transmitindo premium e confianca.
+**3. `src/components/AppSidebar.tsx`**
+- Adicionar item de menu "Quiz Expert" com url `/admin/expert-quiz` e icone `FileQuestion` (ou `Sparkles`)
+
+**4. `src/App.tsx`**
+- Importar `AdminExpertQuiz` e `AdminExpertQuizDetail`
+- Adicionar rotas protegidas (Owner/Admin):
+  - `/admin/expert-quiz` -> `AdminExpertQuiz`
+  - `/admin/expert-quiz/:id` -> `AdminExpertQuizDetail`
+
+---
+
+### Detalhes tecnicos
+
+- Reutilizar `QUIZ_QUESTIONS` e `QUIZ_BLOCKS` do `quizSchema.ts` para mapear field_key -> label e agrupar por bloco
+- Status badges: `created` = cinza, `in_progress` = amarelo, `completed` = verde
+- Progresso calculado como `current_block / 10 * 100`
+- Para criar novo quiz, gerar token com `crypto.randomUUID()` no frontend
+- O link do quiz sera `{window.location.origin}/quiz/{token}`
+- Dialog de criacao usa campos simples (Input + Textarea)
+- Nenhuma migracao de banco necessaria -- tabelas `expert_onboardings` e `expert_onboarding_responses` ja existem com RLS adequada
+
