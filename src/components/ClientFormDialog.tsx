@@ -82,6 +82,7 @@ export function ClientFormDialog({ open, onOpenChange, onSuccess, client }: Clie
     company: "",
     start_date: "",
     status: "Pendente",
+    client_type: "",
   });
   
   // Tab 2: Brand Identity
@@ -115,6 +116,13 @@ export function ClientFormDialog({ open, onOpenChange, onSuccess, client }: Clie
           company: client.company || "",
           start_date: client.start_date || "",
           status: client.status,
+          client_type: "",
+        });
+        // Fetch client_type from database
+        supabase.from("clients").select("client_type").eq("id", client.id).single().then(({ data }) => {
+          if (data?.client_type) {
+            setClientData(prev => ({ ...prev, client_type: data.client_type || "" }));
+          }
         });
         setSendWelcomeEmail(false); // Don't send email when editing
       } else {
@@ -195,6 +203,7 @@ export function ClientFormDialog({ open, onOpenChange, onSuccess, client }: Clie
             company: clientData.company || null,
             start_date: clientData.start_date || null,
             status: clientData.status,
+            client_type: clientData.client_type || null,
           })
           .eq("id", client.id);
 
@@ -211,6 +220,7 @@ export function ClientFormDialog({ open, onOpenChange, onSuccess, client }: Clie
             company: clientData.company || null,
             start_date: clientData.start_date || null,
             status: clientData.status,
+            client_type: clientData.client_type || null,
             user_id: user?.id,
           }])
           .select()
@@ -339,7 +349,7 @@ export function ClientFormDialog({ open, onOpenChange, onSuccess, client }: Clie
   };
 
   const resetForm = () => {
-    setClientData({ name: "", email: "", phone: "", company: "", start_date: "", status: "Pendente" });
+    setClientData({ name: "", email: "", phone: "", company: "", start_date: "", status: "Pendente", client_type: "" });
     setBrandIdentity({
       color_palette: { primary: "#000000", secondary: "#ffffff", accent: "#888888" },
       typography: { heading: "", body: "" },
@@ -439,6 +449,25 @@ export function ClientFormDialog({ open, onOpenChange, onSuccess, client }: Clie
                   <SelectItem value="Pendente">Pendente</SelectItem>
                   <SelectItem value="Ativo">Ativo</SelectItem>
                   <SelectItem value="Inativo">Inativo</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="client_type">Tipo de Cliente *</Label>
+              <Select
+                value={clientData.client_type}
+                onValueChange={(value) => setClientData({ ...clientData, client_type: value })}
+              >
+                <SelectTrigger id="client_type">
+                  <SelectValue placeholder="Selecione o tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Completo">Completo</SelectItem>
+                  <SelectItem value="Expert">Expert</SelectItem>
+                  <SelectItem value="Gestao_Trafego">Gestão de Tráfego</SelectItem>
+                  <SelectItem value="Negocio_Local">Negócio Local</SelectItem>
+                  <SelectItem value="Social_Media">Social Media</SelectItem>
                 </SelectContent>
               </Select>
             </div>
