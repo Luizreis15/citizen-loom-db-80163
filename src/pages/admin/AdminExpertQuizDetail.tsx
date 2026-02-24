@@ -3,7 +3,9 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ArrowLeft, Mail, Phone, FolderOpen } from "lucide-react";
+import { ArrowLeft, Mail, Phone, FolderOpen, Download } from "lucide-react";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -66,11 +68,58 @@ export default function AdminExpertQuizDetail() {
     return { ...block, questions, answered, total, progress };
   });
 
+  const handleDownloadPdf = () => {
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    let y = 20;
+
+    doc.setFontSize(18);
+    doc.text("Diagnóstico Expert", pageWidth / 2, y, { align: "center" });
+    y += 10;
+
+    doc.setFontSize(11);
+    doc.text(`Nome: ${onboarding.expert_name}`, 14, y); y += 6;
+    doc.text(`Email: ${onboarding.expert_email}`, 14, y); y += 6;
+    if (onboarding.expert_whatsapp) { doc.text(`WhatsApp: ${onboarding.expert_whatsapp}`, 14, y); y += 6; }
+    if (onboarding.project_name) { doc.text(`Projeto: ${onboarding.project_name}`, 14, y); y += 6; }
+    doc.text(`Status: ${cfg.label}`, 14, y); y += 6;
+    doc.text(`Criado: ${format(new Date(onboarding.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}`, 14, y); y += 6;
+    if (onboarding.completed_at) { doc.text(`Concluído: ${format(new Date(onboarding.completed_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}`, 14, y); y += 6; }
+    y += 4;
+
+    blocks.forEach((block) => {
+      const rows = block.questions.map((q) => {
+        const val = responseMap.get(q.key) || "Pendente";
+        return [q.label, val];
+      });
+
+      autoTable(doc, {
+        startY: y,
+        head: [[block.label, "Resposta"]],
+        body: rows,
+        styles: { fontSize: 9, cellPadding: 3 },
+        headStyles: { fillColor: [30, 30, 60], textColor: 255 },
+        columnStyles: { 0: { cellWidth: 80 }, 1: { cellWidth: "auto" } },
+        margin: { left: 14, right: 14 },
+        didDrawPage: () => { y = 20; },
+      });
+
+      y = (doc as any).lastAutoTable.finalY + 8;
+    });
+
+    doc.save(`diagnostico-${onboarding.expert_name.replace(/\s+/g, "-").toLowerCase()}.pdf`);
+  };
+
   return (
     <div className="space-y-6">
-      <Button variant="ghost" asChild>
-        <Link to="/admin/expert-quiz"><ArrowLeft className="mr-2 h-4 w-4" /> Voltar</Link>
-      </Button>
+      <div className="flex items-center justify-between">
+        <Button variant="ghost" asChild>
+          <Link to="/admin/expert-quiz"><ArrowLeft className="mr-2 h-4 w-4" /> Voltar</Link>
+        </Button>
+        <Button variant="outline" onClick={handleDownloadPdf} className="gap-2">
+          <Download className="h-4 w-4" /> Baixar PDF
+        </Button>
+      </div>
 
       <Card>
         <CardHeader>
